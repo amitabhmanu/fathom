@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/context-contract" },
+    { "path": "packages/fathomd" },
+    { "path": "packages/fathomd-client" },
+    { "path": "packages/hooks" },
+    { "path": "packages/fathom-mcp" }
+  ]
+}

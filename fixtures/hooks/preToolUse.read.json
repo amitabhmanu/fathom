@@ -1,0 +1,10 @@
+{
+  "session_id": "test-session-0001",
+  "prompt_id": "550e8400-e29b-41d4-a716-446655440000",
+  "transcript_path": "C:\\Users\\Amitabh\\.claude\\projects\\fathom\\transcript.jsonl",
+  "cwd": "C:\\Users\\Amitabh\\projects\\fathom",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Read",
+  "tool_input": { "file_path": "docs/fathom-roadmap.md" }
+}

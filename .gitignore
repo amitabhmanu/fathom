@@ -1,5 +1,6 @@
 node_modules/
 **/dist/
+*.tsbuildinfo
 .fathom/state/
 *.log
 .fathom/*.db

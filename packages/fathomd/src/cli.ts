@@ -1,0 +1,85 @@
+#!/usr/bin/env node
+import { resolveEndpoint, readEndpointFile } from "./endpoint.js";
+import { openDb } from "./store/db.js";
+import { RawEventLog } from "./store/rawEventLog.js";
+import { EnvelopeStore } from "./store/envelopeStore.js";
+import { createRequestListener } from "./requestListener.js";
+import { startServer } from "./server.js";
+
+function projectRootFromEnv(): string {
+  return process.env.FATHOM_PROJECT_ROOT ?? process.cwd();
+}
+
+async function cmdStart(): Promise<void> {
+  const endpoint = resolveEndpoint(projectRootFromEnv());
+  const db = openDb(endpoint.dbPath);
+  const rawEventLog = new RawEventLog(db);
+  const envelopeStore = new EnvelopeStore(db);
+  const listener = createRequestListener({ rawEventLog, envelopeStore });
+  const handle = await startServer(endpoint, listener);
+  process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);
+}
+
+function cmdStop(): void {
+  const endpoint = resolveEndpoint(projectRootFromEnv());
+  const info = readEndpointFile(endpoint);
+  if (!info) {
+    process.stdout.write("fathomd is not running (no endpoint file found)\n");
+    return;
+  }
+  try {
+    process.kill(info.pid);
+    process.stdout.write(`sent stop signal to fathomd pid ${info.pid}\n`);
+  } catch (err) {
+    process.stdout.write(`could not stop fathomd pid ${info.pid}: ${(err as Error).message}\n`);
+  }
+}
+
+function cmdInspect(sourceUri: string): void {
+  const endpoint = resolveEndpoint(projectRootFromEnv());
+  const db = openDb(endpoint.dbPath);
+  const envelopeStore = new EnvelopeStore(db);
+  const envelopes = envelopeStore.getBySourceUri(sourceUri);
+  process.stdout.write(`${JSON.stringify(envelopes, null, 2)}\n`);
+}
+
+function cmdLogTail(limit: number): void {
+  const endpoint = resolveEndpoint(projectRootFromEnv());
+  const db = openDb(endpoint.dbPath);
+  const rawEventLog = new RawEventLog(db);
+  const rows = rawEventLog.tail(limit).reverse();
+  for (const row of rows) {
+    process.stdout.write(`[${row.created_at}] ${row.event_name} ${row.payload_json}\n`);
+  }
+}
+
+async function main(): Promise<void> {
+  const [, , command, ...rest] = process.argv;
+  switch (command) {
+    case "start":
+      await cmdStart();
+      break;
+    case "stop":
+      cmdStop();
+      break;
+    case "inspect":
+      if (!rest[0]) throw new Error("usage: fathomd inspect <source_uri>");
+      cmdInspect(rest[0]);
+      break;
+    case "log":
+      if (rest[0] === "tail") {
+        cmdLogTail(rest[1] ? parseInt(rest[1], 10) : 20);
+      } else {
+        throw new Error("usage: fathomd log tail [limit]");
+      }
+      break;
+    default:
+      process.stderr.write("usage: fathomd start|stop|inspect <source_uri>|log tail [limit]\n");
+      process.exitCode = 1;
+  }
+}
+
+main().catch((err: unknown) => {
+  process.stderr.write(`${(err as Error).message}\n`);
+  process.exitCode = 1;
+});

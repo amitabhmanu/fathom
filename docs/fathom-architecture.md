@@ -80,9 +80,19 @@ These map directly onto the layers doc's "solution components" (clarifying quest
 
 The layers doc requires that re-entering at layer N re-runs every gate from N down to 1 — no isolated patching. Because every interception point funnels through the single `fathomd` process and its single context-store schema, the gate enforcement engine's cascade (`discover → reconcile → access → fit → rank`) is one code path regardless of which hook triggered it. A `FileChanged` event that routes to layer 4 still falls through layers 3f, 3, 2, and 1 on its way back to a usable envelope — it doesn't get a shortcut just because the trigger came from a file-watch hook instead of a `PreToolUse` gate.
 
-## Open questions to resolve before implementation
+## Resolved decisions (Phase 0)
 
-- **Daemon lifecycle**: does `fathomd` start on `SessionStart` and stop on `SessionEnd`, or run as a standing per-machine service across sessions/projects? (Affects whether the feedback store and registry are project-scoped or global.)
-- **Latency budget**: `PreToolUse`/`PostToolUse` fire on every tool call — the round trip to `fathomd` must stay well under human-perceptible latency (target: sub-50ms for cache-hit gate checks).
-- **Classifier dependency**: implicit drift detection (contradiction, goal reframing) needs a model call of its own. Decide whether that's a local heuristic first (per the layers doc's "start rule-based" guidance) before reaching for a classifier model, and if so which model/cost tier.
-- **Multi-session state**: if `fathomd` is per-project, concurrent Claude Code sessions on the same project (e.g. two worktrees) need either a shared store with locking or per-worktree isolation — decide before the context store schema is finalized.
+- **Daemon lifecycle** — resolved: `fathomd` is a standing background process, not tied to any one Claude Code session. It is lazily spawned by whichever hook shim first can't reach it (`/health` check fails → spawn detached → retry with backoff), and keeps running across `SessionEnd`/`SessionStart`. This is what makes "survives SessionEnd" true by construction and avoids a daemon cold-start on every turn. Implemented in `packages/fathomd/src/endpoint.ts` and `packages/fathomd-client/src/client.ts`.
+- **Multi-session state** — resolved: the daemon's named-pipe/TCP endpoint and its SQLite file path are both derived from a hash of the resolved project root (`packages/fathomd/src/endpoint.ts`'s `projectHashFor`). Two Claude Code sessions or worktrees on the same project root share one daemon and one store; a different project root gets a fully separate daemon. SQLite's own locking handles concurrent writes at this scale — no additional coordination was needed.
+
+## Open questions still to resolve
+
+- **Latency budget**: `PreToolUse`/`PostToolUse` fire on every tool call — the round trip to `fathomd` must stay well under human-perceptible latency (target: sub-50ms for cache-hit gate checks). Not yet measured under real load; revisit once Phase 1's rank() adds real work to the `PostToolUse` path.
+- **Classifier dependency**: implicit drift detection (contradiction, goal reframing) needs a model call of its own. Decide whether that's a local heuristic first (per the layers doc's "start rule-based" guidance) before reaching for a classifier model, and if so which model/cost tier. Not needed until Phase 5.
+
+## Real hook behavior confirmed during Phase 0
+
+Verified against the live Claude Code hooks reference while building the hook shims:
+
+- The common input fields (`session_id`, `cwd`, `permission_mode`, `hook_event_name`, etc.) are present on every event, including `Stop` — the architecture doc's hook table already assumed this, and it holds.
+- A hook shim should route on the payload's own `cwd` field rather than trust its inherited OS process `cwd`, since a spawned subprocess's working directory isn't guaranteed to match Claude Code's project root. `packages/hooks/src/lib/runHook.ts` extracts `cwd` from the payload and passes it through explicitly for this reason.
