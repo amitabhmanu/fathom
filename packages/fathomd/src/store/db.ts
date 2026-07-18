@@ -48,6 +48,11 @@ const MIGRATIONS = [
      approved_by TEXT NOT NULL,
      created_at TEXT NOT NULL,
      PRIMARY KEY (source_uri, scope)
+   )`,
+  `CREATE TABLE IF NOT EXISTS gap_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     topic TEXT NOT NULL,
+     created_at TEXT NOT NULL
    )`
 ];
 

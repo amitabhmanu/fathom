@@ -14,3 +14,6 @@ export * from "./credentials/credentialContext.js";
 export * from "./reconcile.js";
 export * from "./registry/sourceOfTruthRegistry.js";
 export * from "./registry/registryConfig.schema.js";
+export * from "./scope.js";
+export * from "./elicit.js";
+export * from "./discover.js";

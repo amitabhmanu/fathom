@@ -20,7 +20,7 @@ describe("fathom-mcp server scaffold", () => {
     await client.close();
   });
 
-  it("declares fathom_query_source_of_truth and fathom_request_access as of Phase 3", async () => {
+  it("declares all five explicit-action tools as of Phase 4", async () => {
     const server = createFathomMcpServer();
     const client = new Client({ name: "test-client", version: "0.0.0" });
     const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
@@ -29,7 +29,13 @@ describe("fathom-mcp server scaffold", () => {
 
     const { tools } = await client.listTools();
     const toolNames = tools.map((t) => t.name).sort();
-    expect(toolNames).toEqual(["fathom_query_source_of_truth", "fathom_request_access"]);
+    expect(toolNames).toEqual([
+      "fathom_ask_clarifying_question",
+      "fathom_elicit",
+      "fathom_query_source_of_truth",
+      "fathom_report_gap",
+      "fathom_request_access"
+    ]);
 
     await client.close();
   });

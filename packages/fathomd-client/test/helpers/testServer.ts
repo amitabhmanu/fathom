@@ -11,6 +11,7 @@ import {
   AccessStatusStore,
   RegistryStore,
   AccessGrantStore,
+  RecurrenceStore,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -36,6 +37,7 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
   const accessStatusStore = new AccessStatusStore(db);
   const registryStore = new RegistryStore(projectRoot);
   const accessGrantStore = new AccessGrantStore(db);
+  const recurrenceStore = new RecurrenceStore(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -43,7 +45,8 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
     compactionLog,
     accessStatusStore,
     registryStore,
-    accessGrantStore
+    accessGrantStore,
+    recurrenceStore
   });
   const handle = await startServer(endpoint, listener);
 

@@ -67,9 +67,9 @@ Hooks alone can gate and inject, but "ask a clarifying question" and "escalate t
 
 | Tool | Layer | Purpose |
 |---|---|---|
-| `fathom_report_gap` | 6 | Model reports "I don't know what I don't know here" against a completeness checklist; Fathom converts this into a nameable spec and either answers from the registry or surfaces a clarifying question to the user. |
-| `fathom_ask_clarifying_question` | 6, 5 | First-class alternative to guessing. Routed through the user-facing turn rather than silently degrading. |
-| `fathom_elicit` | 5 | Explicit request to capture tacit knowledge, with a required provenance tag (`human-confirmed` vs `inferred`) on the response. |
+| `fathom_report_gap` | 6 | Model reports "I don't know what I don't know here"; Fathom converts this into a nameable spec via `scope()` and tracks recurrence by `task_context`, flagging `documentation_priority` once a topic keeps recurring. |
+| `fathom_ask_clarifying_question` | 6, 5 | First-class alternative to guessing. **Phase 4 implementation note:** does not use the MCP protocol's server-initiated elicitation capability (`elicitation/create`) — real client-side support for it is unconfirmed. Instead, the tool result *is* the posed question; the calling model relays it in its own next turn, and the user's reply arrives as a normal conversational turn (then gets formalized via `fathom_elicit`). Still routed through the user-facing turn, just not via a blocking protocol round-trip. |
+| `fathom_elicit` | 5 | Formalizes and writes back an already-obtained answer with a required provenance tag (`human-confirmed` vs `inferred`). Since a tool call can't itself carry out the interactive "ask and wait," it requires `human_answer` as an input — the model is expected to have already gotten it conversationally, via `fathom_ask_clarifying_question` first. Returns the envelope's `source_uri` so the caller can resolve it again later without needing its generated `envelope_id`. |
 | `fathom_query_source_of_truth` | 3f | Given a data type/topic, returns the registry's authoritative source and its ranking rationale, instead of the model picking among conflicting copies itself. |
 | `fathom_request_access` | 3 | Explicit credential/scope escalation request; never auto-grants, always surfaces to the human. |
 | `fathom_check_freshness` | drift | Model-initiated freshness check on a specific envelope, for cases where the model itself suspects staleness before any automatic detector fires. |

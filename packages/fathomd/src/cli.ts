@@ -8,6 +8,7 @@ import { CompactionLog } from "./store/compactionLog.js";
 import { AccessStatusStore } from "./store/accessStatusStore.js";
 import { RegistryStore } from "./store/registryStore.js";
 import { AccessGrantStore } from "./store/accessGrantStore.js";
+import { RecurrenceStore } from "./store/recurrenceStore.js";
 import { createRequestListener } from "./requestListener.js";
 import { startServer } from "./server.js";
 
@@ -26,6 +27,7 @@ async function cmdStart(): Promise<void> {
   const accessStatusStore = new AccessStatusStore(db);
   const registryStore = new RegistryStore(projectRoot);
   const accessGrantStore = new AccessGrantStore(db);
+  const recurrenceStore = new RecurrenceStore(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -33,7 +35,8 @@ async function cmdStart(): Promise<void> {
     compactionLog,
     accessStatusStore,
     registryStore,
-    accessGrantStore
+    accessGrantStore,
+    recurrenceStore
   });
   const handle = await startServer(endpoint, listener);
   process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);

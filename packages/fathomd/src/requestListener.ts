@@ -5,6 +5,8 @@ import { handleHook } from "./routes/hook.js";
 import { handleGetContext, handlePutContext, handleDeleteContext } from "./routes/context.js";
 import { handleGetRegistryEntry, handlePutRegistryEntry } from "./routes/registry.js";
 import { handleCheckAccessGrant, handleApproveAccessGrant } from "./routes/accessGrant.js";
+import { handleReportGap } from "./routes/gap.js";
+import { handleElicit } from "./routes/elicitRoute.js";
 import type { RawEventLog } from "./store/rawEventLog.js";
 import type { EnvelopeStore } from "./store/envelopeStore.js";
 import type { RankingLog } from "./store/rankingLog.js";
@@ -12,6 +14,7 @@ import type { CompactionLog } from "./store/compactionLog.js";
 import type { AccessStatusStore } from "./store/accessStatusStore.js";
 import type { RegistryStore } from "./store/registryStore.js";
 import type { AccessGrantStore } from "./store/accessGrantStore.js";
+import type { RecurrenceStore } from "./store/recurrenceStore.js";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
@@ -21,6 +24,7 @@ export interface RequestListenerDeps {
   accessStatusStore: AccessStatusStore;
   registryStore: RegistryStore;
   accessGrantStore: AccessGrantStore;
+  recurrenceStore: RecurrenceStore;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -111,6 +115,34 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
           { accessGrantStore: deps.accessGrantStore }
         );
         sendJson(res, 200, result);
+        return;
+      }
+
+      if (method === "POST" && segments.length === 2 && segments[0] === "gap" && segments[1] === "report") {
+        const body = (await readJsonBody(req)) as {
+          description?: string;
+          task_context?: string;
+          checklist_ref?: string;
+        };
+        const result = handleReportGap(
+          {
+            description: body.description ?? "",
+            task_context: body.task_context ?? "",
+            checklist_ref: body.checklist_ref
+          },
+          { envelopeStore: deps.envelopeStore, recurrenceStore: deps.recurrenceStore }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (method === "POST" && segments.length === 1 && segments[0] === "elicit") {
+        const body = (await readJsonBody(req)) as { question?: string; human_answer?: string };
+        const result = handleElicit(
+          { question: body.question ?? "", human_answer: body.human_answer },
+          { envelopeStore: deps.envelopeStore }
+        );
+        sendJson(res, result.ok ? 200 : 422, result);
         return;
       }
 

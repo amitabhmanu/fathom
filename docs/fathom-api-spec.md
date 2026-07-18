@@ -28,6 +28,11 @@ type ScopeSpec = {
 function elicit(input: {
   question: string;
   human_available: boolean;
+  human_answer?: string;                                // added during Phase 4: a pure function can't
+                                                          // itself carry out an interactive "ask" step —
+                                                          // the caller supplies the answer once it has one
+  inference?: { content: string; basis: string[] };      // added during Phase 4: same reasoning, for the
+                                                          // inference branch
 }): ElicitResult;
 
 type ElicitResult =
@@ -129,14 +134,27 @@ DELETE /context/{envelope_id}                        // hard delete, audit-logge
 // Drift
 POST /drift/check { source_uri | envelope_id } → { drift: boolean; re_entry_layer?: Layer; signal: string }
 
-// Registry / catalog (Phase 3/4 — hand-maintained config initially, per roadmap)
-GET  /registry/{data_type} → { authoritative_source: string; rationale: string }
-PUT  /registry/{data_type}
-GET  /catalog → CatalogEntry[]
+// Registry (Phase 3 — hand-maintained config initially, per roadmap)
+GET  /registry/{data_type} → RegistryEntry (404 if none configured)
+PUT  /registry/{data_type}  body: RegistryEntry → { ok: boolean; reason?: string }
+// GET /catalog was speculative and never built: Phase 4's discover() takes a CatalogEntry[]
+// supplied directly by the caller rather than fathomd persisting one — nothing yet needs a
+// daemon-side catalog store. Revisit only if a real caller needs one.
 
-// Feedback / recurrence
-POST /feedback/event { layer: Layer; source_uri: string; outcome: "resolved" | "escalated" | "false-positive" }
-GET  /feedback/recurrence/{source_uri} → { count: number; last_seen: string; promotion_candidate: boolean }
+// Access grants (Phase 3)
+POST /access/check body: { source_uri, scope } → { granted: boolean }
+PUT  /access/grant  body: { source_uri, scope, approved_by } → { ok: true }  // human/admin-only path;
+                                                                             // fathom_request_access
+                                                                             // only ever calls /access/check
+
+// Gap reporting / elicitation (Phase 4 — narrower than the originally-sketched generic
+// /feedback/event+/feedback/recurrence pair above: recurrence is tracked specifically for
+// reported gaps, keyed by task_context, not a general outcome log across all seven layers.
+// A broader feedback store remains open for whichever phase actually needs cross-layer
+// outcome logging.)
+POST /gap/report body: { description, task_context, checklist_ref? } → { question: string; documentation_priority: boolean }
+POST /elicit      body: { question, human_answer? } →
+  { ok: true; content: string; provenance: "human-confirmed" | "inferred"; source_uri: string } | { ok: false; reason: string }
 
 GET /health → { ok: boolean; version: string }
 ```
@@ -151,11 +169,23 @@ Exposed to the model as MCP tools, per the explicit-action rationale in fathom-a
 
 ```ts
 // Layer 6
-fathom_report_gap(input: { description: string; task_context: string }): { question: string; answer_if_known?: string };
-fathom_ask_clarifying_question(input: { question: string }): { user_response: string };
+fathom_report_gap(input: { description: string; task_context: string; checklist_ref?: string }):
+  { question: string; answer_if_known?: string; documentation_priority: boolean };  // documentation_priority added Phase 4
+fathom_ask_clarifying_question(input: { question: string }): { posed_question: string };
+  // Phase 4 deviation from the original { user_response: string } shape: true synchronous
+  // elicitation would require the MCP protocol's server-initiated elicitation capability
+  // (elicitation/create), whose real-world client support is unconfirmed. This tool instead
+  // poses the question as tool-result text for the calling model to relay in its own next
+  // turn; the answer arrives as a normal conversational turn, then gets formalized via
+  // fathom_elicit below. See fathom-architecture.md's MCP tool table for the full rationale.
 
 // Layer 5
-fathom_elicit(input: { question: string }): { content: string; provenance: "human-confirmed" | "inferred" };
+fathom_elicit(input: { question: string; human_answer: string }):
+  { content: string; provenance: "human-confirmed" | "inferred"; source_uri: string };
+  // Phase 4 adds the required human_answer input (a pure/tool function can't itself carry
+  // out the interactive "ask and wait" step — see elicit()'s own signature above) and
+  // source_uri in the output, so a caller can resolve the same envelope again later
+  // (GET /context/{source_uri}) without needing to already know its generated envelope_id.
 
 // Layer 3f
 fathom_query_source_of_truth(input: { data_type: string; topic: string }): { source_uri: string; rationale: string };

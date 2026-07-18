@@ -114,7 +114,14 @@ Each phase lists: goal, deliverables, exit criteria, dependencies. A phase is "d
 
 **Exit criteria:**
 - At least one real session where a genuine knowledge gap gets surfaced as a clarifying question via `fathom_ask_clarifying_question` rather than the model confabulating.
-- An elicited answer, once given, is retrievable in a later session as a layer-5 envelope (proves write-back works end to end).
+- An elicited answer, once given, is retrievable in a later session as a layer-5 envelope (proves write-back works end to end) — verified with a real process kill + restart integration test, structurally identical to Phase 0's own restart-persistence test.
+
+**Implementation notes (concrete interpretations decided during Phase 4):**
+- `fathom_ask_clarifying_question` does **not** use the MCP protocol's server-initiated elicitation capability (`elicitation/create`), even though the SDK supports it — real-world client-side support was judged too uncertain to build the exit criterion on top of. Instead the tool returns the question as its own result text for the model to relay conversationally; the answer comes back as a normal next turn, then gets formalized via `fathom_elicit`. This is documented as a deliberate, revisitable scope decision, not an oversight — see fathom-architecture.md's MCP tool table.
+- `elicit()` and `fathom_elicit` both require the answer to already be in hand (`human_answer`) rather than attempting to fetch one interactively, for the same reason: pure functions and simple request/response tools can't carry out an "ask and wait" step themselves.
+- `discover()` only implements the catalog-lookup half of layer 4. The layers doc's "agent-driven exploration when the catalog is silent" isn't something a pure function does — `discover()` returning `none-below-threshold` *is* the signal that should prompt the calling model to explore on its own; no separate exploration mechanism was built.
+- Recurrence tracking landed narrower than the roadmap's original phrasing ("feedback store"): it's a dedicated `gap_events` table keyed by `task_context`, not a general cross-layer outcome log. A broader feedback store (logging every layer's gate outcomes, per fathom-architecture.md's Feedback store component) remains future work — Phase 4 only needed gap/question recurrence.
+- `fathom_report_gap` and `fathom_ask_clarifying_question` share the same underlying `/gap/report` daemon endpoint and recurrence tracking, since both are fundamentally "name a gap and track how often it recurs" — they differ only in framing (checklist-driven vs. direct question) and tool-facing description, not mechanism.
 
 **Dependencies:** Phase 3 (a discovered/elicited item still needs to flow through reconciliation → access → fit → rank).
 
