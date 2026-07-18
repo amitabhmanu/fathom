@@ -5,6 +5,9 @@ import { RawEventLog } from "./store/rawEventLog.js";
 import { EnvelopeStore } from "./store/envelopeStore.js";
 import { RankingLog } from "./store/rankingLog.js";
 import { CompactionLog } from "./store/compactionLog.js";
+import { AccessStatusStore } from "./store/accessStatusStore.js";
+import { RegistryStore } from "./store/registryStore.js";
+import { AccessGrantStore } from "./store/accessGrantStore.js";
 import { createRequestListener } from "./requestListener.js";
 import { startServer } from "./server.js";
 
@@ -13,13 +16,25 @@ function projectRootFromEnv(): string {
 }
 
 async function cmdStart(): Promise<void> {
-  const endpoint = resolveEndpoint(projectRootFromEnv());
+  const projectRoot = projectRootFromEnv();
+  const endpoint = resolveEndpoint(projectRoot);
   const db = openDb(endpoint.dbPath);
   const rawEventLog = new RawEventLog(db);
   const envelopeStore = new EnvelopeStore(db);
   const rankingLog = new RankingLog(db);
   const compactionLog = new CompactionLog(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog, compactionLog });
+  const accessStatusStore = new AccessStatusStore(db);
+  const registryStore = new RegistryStore(projectRoot);
+  const accessGrantStore = new AccessGrantStore(db);
+  const listener = createRequestListener({
+    rawEventLog,
+    envelopeStore,
+    rankingLog,
+    compactionLog,
+    accessStatusStore,
+    registryStore,
+    accessGrantStore
+  });
   const handle = await startServer(endpoint, listener);
   process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);
 }

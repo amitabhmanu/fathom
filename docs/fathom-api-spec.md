@@ -49,6 +49,7 @@ type DiscoverResult = {
 
 // Layer 3f — fragmented
 function reconcile(input: {
+  data_type: string;                // added during Phase 3: the registry can't rank without knowing the data type
   candidates: { source_uri: string; content: string; last_modified?: string }[];
   registry: SourceOfTruthRegistry;
 }): ReconcileResult;
@@ -63,6 +64,7 @@ type ReconcileResult = {
 // Layer 3 — inaccessible
 function access(input: {
   source_uri: string;
+  content: string;                  // added during Phase 3: format and redaction sub-checks need the actual content
   credential_ctx: CredentialContext;
 }): AccessResult;
 

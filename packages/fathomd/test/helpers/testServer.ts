@@ -8,6 +8,9 @@ import { RawEventLog } from "../../src/store/rawEventLog.js";
 import { EnvelopeStore } from "../../src/store/envelopeStore.js";
 import { RankingLog } from "../../src/store/rankingLog.js";
 import { CompactionLog } from "../../src/store/compactionLog.js";
+import { AccessStatusStore } from "../../src/store/accessStatusStore.js";
+import { RegistryStore } from "../../src/store/registryStore.js";
+import { AccessGrantStore } from "../../src/store/accessGrantStore.js";
 import { createRequestListener } from "../../src/requestListener.js";
 import { startServer, type FathomServerHandle } from "../../src/server.js";
 
@@ -18,6 +21,9 @@ export interface TestServer {
   envelopeStore: EnvelopeStore;
   rankingLog: RankingLog;
   compactionLog: CompactionLog;
+  accessStatusStore: AccessStatusStore;
+  registryStore: RegistryStore;
+  accessGrantStore: AccessGrantStore;
   request(method: string, urlPath: string, body?: unknown): Promise<{ status: number; body: unknown }>;
   cleanup(): Promise<void>;
 }
@@ -30,7 +36,18 @@ export async function startTestServer(): Promise<TestServer> {
   const envelopeStore = new EnvelopeStore(db);
   const rankingLog = new RankingLog(db);
   const compactionLog = new CompactionLog(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog, compactionLog });
+  const accessStatusStore = new AccessStatusStore(db);
+  const registryStore = new RegistryStore(projectRoot);
+  const accessGrantStore = new AccessGrantStore(db);
+  const listener = createRequestListener({
+    rawEventLog,
+    envelopeStore,
+    rankingLog,
+    compactionLog,
+    accessStatusStore,
+    registryStore,
+    accessGrantStore
+  });
   const handle = await startServer(endpoint, listener);
 
   function request(method: string, urlPath: string, body?: unknown): Promise<{ status: number; body: unknown }> {
@@ -60,5 +77,17 @@ export async function startTestServer(): Promise<TestServer> {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 
-  return { endpoint, handle, rawEventLog, envelopeStore, rankingLog, compactionLog, request, cleanup };
+  return {
+    endpoint,
+    handle,
+    rawEventLog,
+    envelopeStore,
+    rankingLog,
+    compactionLog,
+    accessStatusStore,
+    registryStore,
+    accessGrantStore,
+    request,
+    cleanup
+  };
 }

@@ -20,13 +20,14 @@ import {
 export interface RunningTestDaemon {
   endpoint: FathomEndpoint;
   handle: FathomServerHandle;
-  rawEventLog: RawEventLog;
+  registryStore: RegistryStore;
+  accessGrantStore: AccessGrantStore;
   cleanup(): Promise<void>;
 }
 
-/** Spins up a real fathomd-shaped server (same code fathomd's own CLI uses) for client tests. */
+/** Spins up a real fathomd-shaped server (same code fathomd's own CLI uses) for MCP tool tests. */
 export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
-  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fathomd-client-test-"));
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fathom-mcp-test-"));
   const endpoint = resolveEndpoint(projectRoot);
   const db = openDb(endpoint.dbPath);
   const rawEventLog = new RawEventLog(db);
@@ -53,5 +54,5 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 
-  return { endpoint, handle, rawEventLog, cleanup };
+  return { endpoint, handle, registryStore, accessGrantStore, cleanup };
 }

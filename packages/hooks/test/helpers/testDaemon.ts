@@ -8,6 +8,9 @@ import {
   EnvelopeStore,
   RankingLog,
   CompactionLog,
+  AccessStatusStore,
+  RegistryStore,
+  AccessGrantStore,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -37,7 +40,18 @@ export async function startTestDaemon(): Promise<TestDaemon> {
   const envelopeStore = new EnvelopeStore(db);
   const rankingLog = new RankingLog(db);
   const compactionLog = new CompactionLog(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog, compactionLog });
+  const accessStatusStore = new AccessStatusStore(db);
+  const registryStore = new RegistryStore(projectRoot);
+  const accessGrantStore = new AccessGrantStore(db);
+  const listener = createRequestListener({
+    rawEventLog,
+    envelopeStore,
+    rankingLog,
+    compactionLog,
+    accessStatusStore,
+    registryStore,
+    accessGrantStore
+  });
   const handle = await startServer(endpoint, listener);
 
   async function cleanup(): Promise<void> {

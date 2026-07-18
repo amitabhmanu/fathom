@@ -3,16 +3,24 @@ import { readJsonBody, sendJson } from "./httpUtil.js";
 import { handleHealth } from "./routes/health.js";
 import { handleHook } from "./routes/hook.js";
 import { handleGetContext, handlePutContext, handleDeleteContext } from "./routes/context.js";
+import { handleGetRegistryEntry, handlePutRegistryEntry } from "./routes/registry.js";
+import { handleCheckAccessGrant, handleApproveAccessGrant } from "./routes/accessGrant.js";
 import type { RawEventLog } from "./store/rawEventLog.js";
 import type { EnvelopeStore } from "./store/envelopeStore.js";
 import type { RankingLog } from "./store/rankingLog.js";
 import type { CompactionLog } from "./store/compactionLog.js";
+import type { AccessStatusStore } from "./store/accessStatusStore.js";
+import type { RegistryStore } from "./store/registryStore.js";
+import type { AccessGrantStore } from "./store/accessGrantStore.js";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
   envelopeStore: EnvelopeStore;
   rankingLog: RankingLog;
   compactionLog: CompactionLog;
+  accessStatusStore: AccessStatusStore;
+  registryStore: RegistryStore;
+  accessGrantStore: AccessGrantStore;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -34,7 +42,8 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
           rawEventLog: deps.rawEventLog,
           envelopeStore: deps.envelopeStore,
           rankingLog: deps.rankingLog,
-          compactionLog: deps.compactionLog
+          compactionLog: deps.compactionLog,
+          accessStatusStore: deps.accessStatusStore
         });
         sendJson(res, 200, result);
         return;
@@ -61,6 +70,46 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
       if (method === "DELETE" && segments[0] === "context" && segments.length === 2) {
         const envelopeId = decodeURIComponent(segments[1]);
         const result = handleDeleteContext(envelopeId, { envelopeStore: deps.envelopeStore });
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (method === "GET" && segments[0] === "registry" && segments.length === 2) {
+        const dataType = decodeURIComponent(segments[1]);
+        const entry = handleGetRegistryEntry(dataType, { registryStore: deps.registryStore });
+        if (!entry) {
+          sendJson(res, 404, { error: "not found" });
+          return;
+        }
+        sendJson(res, 200, entry);
+        return;
+      }
+
+      if (method === "PUT" && segments[0] === "registry" && segments.length === 2) {
+        const dataType = decodeURIComponent(segments[1]);
+        const body = await readJsonBody(req);
+        const result = handlePutRegistryEntry(dataType, body, { registryStore: deps.registryStore });
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (method === "POST" && segments.length === 2 && segments[0] === "access" && segments[1] === "check") {
+        const body = (await readJsonBody(req)) as { source_uri?: string; scope?: string };
+        const result = handleCheckAccessGrant(body.source_uri ?? "", body.scope ?? "", {
+          accessGrantStore: deps.accessGrantStore
+        });
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (method === "PUT" && segments.length === 2 && segments[0] === "access" && segments[1] === "grant") {
+        const body = (await readJsonBody(req)) as { source_uri?: string; scope?: string; approved_by?: string };
+        const result = handleApproveAccessGrant(
+          body.source_uri ?? "",
+          body.scope ?? "",
+          body.approved_by ?? "unknown",
+          { accessGrantStore: deps.accessGrantStore }
+        );
         sendJson(res, 200, result);
         return;
       }

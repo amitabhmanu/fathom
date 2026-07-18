@@ -1,0 +1,18 @@
+{
+  "pricing": {
+    "rules": [
+      { "uri_prefix": "crm://", "priority": 100 },
+      { "uri_prefix": "wiki://", "priority": 20 },
+      { "uri_prefix": "slack://", "priority": 10 }
+    ],
+    "rationale": "CRM is the system of record for pricing; wiki pages and Slack threads are informal and go stale."
+  },
+  "org_chart": {
+    "rules": [
+      { "uri_prefix": "hris://", "priority": 100 },
+      { "uri_prefix": "directory://", "priority": 50 },
+      { "uri_prefix": "onboarding-doc://", "priority": 5 }
+    ],
+    "rationale": "HRIS is authoritative for reporting lines; the internal directory is usually in sync but not guaranteed; onboarding docs go stale almost immediately."
+  }
+}

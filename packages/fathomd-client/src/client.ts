@@ -83,9 +83,15 @@ export async function ensureDaemonRunning(
   throw new Error(`fathomd did not become healthy after spawn for project ${endpoint.projectRoot}`);
 }
 
-export async function postHook(
-  eventName: string,
-  payload: unknown,
+/**
+ * Ensures a daemon is reachable for the resolved project, then makes one HTTP request
+ * against it. The shared entry point for postHook() and any other fathomd endpoint a
+ * client (a hook shim, fathom-mcp) needs to call.
+ */
+export async function fathomRequest(
+  method: string,
+  urlPath: string,
+  body?: unknown,
   options: PostHookOptions = {},
   deps: EnsureDaemonDeps = defaultEnsureDaemonDeps
 ): Promise<unknown> {
@@ -102,5 +108,14 @@ export async function postHook(
   if (!info) {
     throw new Error("fathomd endpoint file missing immediately after ensureDaemonRunning reported healthy");
   }
-  return requestJson(info, "POST", `/hook/${encodeURIComponent(eventName)}`, payload);
+  return requestJson(info, method, urlPath, body);
+}
+
+export async function postHook(
+  eventName: string,
+  payload: unknown,
+  options: PostHookOptions = {},
+  deps: EnsureDaemonDeps = defaultEnsureDaemonDeps
+): Promise<unknown> {
+  return fathomRequest("POST", `/hook/${encodeURIComponent(eventName)}`, payload, options, deps);
 }

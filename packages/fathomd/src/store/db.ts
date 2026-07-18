@@ -35,6 +35,19 @@ const MIGRATIONS = [
      phase TEXT NOT NULL,
      envelope_ids_json TEXT NOT NULL,
      created_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS access_status (
+     source_uri TEXT PRIMARY KEY,
+     status TEXT NOT NULL,
+     reason TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS access_grants (
+     source_uri TEXT NOT NULL,
+     scope TEXT NOT NULL,
+     approved_by TEXT NOT NULL,
+     created_at TEXT NOT NULL,
+     PRIMARY KEY (source_uri, scope)
    )`
 ];
 

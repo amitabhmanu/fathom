@@ -12,6 +12,8 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@fathom/fathomd-client": "^0.1.0",
+    "@fathom/layer-functions": "^0.1.0"
   }
 }

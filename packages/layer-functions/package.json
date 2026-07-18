@@ -9,6 +9,7 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@fathom/context-contract": "^0.1.0"
+    "@fathom/context-contract": "^0.1.0",
+    "zod": "^3.23.8"
   }
 }

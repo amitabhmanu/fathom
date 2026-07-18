@@ -20,17 +20,16 @@ describe("fathom-mcp server scaffold", () => {
     await client.close();
   });
 
-  it("does not declare the tools capability yet (zero tools registered, per Phase 0 scope)", async () => {
-    // Real MCP behavior: a server only declares/handles "tools/list" once at least one
-    // tool has been registered (see McpServer.setToolRequestHandlers, called lazily from
-    // registerTool). Phase 0 intentionally registers none, so this must fail, not return [].
+  it("declares fathom_query_source_of_truth and fathom_request_access as of Phase 3", async () => {
     const server = createFathomMcpServer();
     const client = new Client({ name: "test-client", version: "0.0.0" });
     const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
 
     await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
-    await expect(client.listTools()).rejects.toThrow(/Method not found/);
+    const { tools } = await client.listTools();
+    const toolNames = tools.map((t) => t.name).sort();
+    expect(toolNames).toEqual(["fathom_query_source_of_truth", "fathom_request_access"]);
 
     await client.close();
   });

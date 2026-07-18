@@ -244,3 +244,82 @@ describe("PreCompact / PostCompact (Phase 2 exit criteria)", () => {
     expect(JSON.parse(postEntry!.envelope_ids_json)).toContain(docEnvelopeId);
   });
 });
+
+describe("Layer 3 gating: PreToolUse / PostToolUseFailure / PermissionDenied (Phase 3 exit criteria)", () => {
+  it("PostToolUseFailure tags a credentials error and responds with additionalContext, never a stack trace", async () => {
+    server = await startTestServer();
+    const res = await server.request(
+      "POST",
+      "/hook/PostToolUseFailure",
+      loadFixture("postToolUseFailure.authError.json")
+    );
+    expect(res.status).toBe(200);
+    const body = res.body as { hookSpecificOutput?: { additionalContext?: string } };
+    expect(body.hookSpecificOutput?.additionalContext).toMatch(/credentials/);
+
+    const status = server.accessStatusStore.get("system://secure-doc.md");
+    expect(status?.status).toBe("credentials");
+  });
+
+  it("PostToolUseFailure defers 404/not-found errors to Phase 4 — no tagging, no decision", async () => {
+    server = await startTestServer();
+    const res = await server.request(
+      "POST",
+      "/hook/PostToolUseFailure",
+      loadFixture("postToolUseFailure.notFound.json")
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({});
+    expect(server.accessStatusStore.get("system://moved-doc.md")).toBeNull();
+  });
+
+  it("PreToolUse denies/asks for a previously-known-inaccessible source — never silently allows", async () => {
+    server = await startTestServer();
+    // First failure: PostToolUseFailure tags the source as inaccessible.
+    await server.request("POST", "/hook/PostToolUseFailure", loadFixture("postToolUseFailure.authError.json"));
+
+    // A later PreToolUse attempt at the same source must be gated, not silently allowed.
+    const res = await server.request(
+      "POST",
+      "/hook/PreToolUse",
+      loadFixture("preToolUse.knownInaccessible.json")
+    );
+    expect(res.status).toBe(200);
+    const body = res.body as {
+      hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
+    };
+    expect(["deny", "ask"]).toContain(body.hookSpecificOutput?.permissionDecision);
+    expect(body.hookSpecificOutput?.permissionDecisionReason).toBeTruthy();
+  });
+
+  it("PreToolUse allows silently (Phase 0 no-op) when nothing is known about the source", async () => {
+    server = await startTestServer();
+    const res = await server.request("POST", "/hook/PreToolUse", loadFixture("preToolUse.read.json"));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({});
+  });
+
+  it("PermissionDenied tags the source as layer-3/policy and sets retry:false", async () => {
+    server = await startTestServer();
+    const res = await server.request(
+      "POST",
+      "/hook/PermissionDenied",
+      loadFixture("permissionDenied.policy.json")
+    );
+    expect(res.status).toBe(200);
+    const body = res.body as { hookSpecificOutput?: { retry?: boolean } };
+    expect(body.hookSpecificOutput?.retry).toBe(false);
+
+    const status = server.accessStatusStore.get("system://restricted-doc.md");
+    expect(status?.status).toBe("policy");
+    expect(status?.reason).toBe("blocked by data-loss-prevention policy");
+
+    // A later PreToolUse attempt gets denied outright (policy, not "ask" — asking again won't help).
+    const preToolUseRes = await server.request("POST", "/hook/PreToolUse", {
+      ...(loadFixture("preToolUse.read.json") as Record<string, unknown>),
+      tool_input: { file_path: "system://restricted-doc.md" }
+    });
+    const preToolUseBody = preToolUseRes.body as { hookSpecificOutput?: { permissionDecision?: string } };
+    expect(preToolUseBody.hookSpecificOutput?.permissionDecision).toBe("deny");
+  });
+});

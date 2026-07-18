@@ -1,0 +1,9 @@
+{
+  "session_id": "test-session-0001",
+  "cwd": "C:\\Users\\Amitabh\\projects\\fathom",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Read",
+  "tool_input": { "file_path": "system://moved-doc.md" },
+  "tool_error": "404 Not Found: system://moved-doc.md"
+}

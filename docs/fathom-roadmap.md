@@ -92,6 +92,12 @@ Each phase lists: goal, deliverables, exit criteria, dependencies. A phase is "d
 - A fixture with two conflicting "sources" for the same fact resolves to one envelope with a non-empty `discard_record`, and the MCP tool surfaces the same rationale on request.
 - A fixture requiring a missing credential produces a human-facing escalation (via hook `ask` or MCP `fathom_request_access`), not a stack trace or silent skip.
 
+**Implementation notes (concrete interpretations decided during Phase 3):**
+- `access()`'s format and policy sub-checks are deliberately simple, deterministic heuristics, not a real OCR/parser pipeline or policy DSL: format usability is a control-character-ratio check; policy blocking is a literal `[LEGAL_HOLD]` marker; redaction targets SSN-shaped patterns only. All three are documented as placeholders in `packages/layer-functions/src/redaction/policyLayer.ts` for a later phase to replace.
+- `PreToolUse` gating only covers deny/ask based on previously-known inaccessibility (`AccessStatusStore`, populated by real `PostToolUseFailure`/`PermissionDenied` events) — registry-based `updatedInput` redirection was deferred (see fathom-architecture.md's `PreToolUse` row) since no caller yet establishes a `data_type` association for an arbitrary tool call's target.
+- `fathom_request_access` never auto-grants by construction, not just convention: its read path (`POST /access/check`) and the human/admin write path (`PUT /access/grant`) are separate daemon endpoints, and the MCP tool only ever calls the former.
+- The source-of-truth registry (`.fathom/registry.json`, committed) uses `uri_prefix` matching rather than exact source_uri lookup, since real candidate URIs vary (e.g. `crm://pricing/plan-a` vs `crm://pricing/plan-b`) — ranking is per-system, not per-exact-URI.
+
 **Dependencies:** Phase 2 (reconciled/access-cleared content still needs to pass through fit/rank before use).
 
 ---
