@@ -5,6 +5,7 @@
     { "path": "packages/fathomd" },
     { "path": "packages/fathomd-client" },
     { "path": "packages/hooks" },
-    { "path": "packages/fathom-mcp" }
+    { "path": "packages/fathom-mcp" },
+    { "path": "packages/layer-functions" }
   ]
 }

@@ -3,6 +3,7 @@ import { resolveEndpoint, readEndpointFile } from "./endpoint.js";
 import { openDb } from "./store/db.js";
 import { RawEventLog } from "./store/rawEventLog.js";
 import { EnvelopeStore } from "./store/envelopeStore.js";
+import { RankingLog } from "./store/rankingLog.js";
 import { createRequestListener } from "./requestListener.js";
 import { startServer } from "./server.js";
 
@@ -15,7 +16,8 @@ async function cmdStart(): Promise<void> {
   const db = openDb(endpoint.dbPath);
   const rawEventLog = new RawEventLog(db);
   const envelopeStore = new EnvelopeStore(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore });
+  const rankingLog = new RankingLog(db);
+  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog });
   const handle = await startServer(endpoint, listener);
   process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);
 }
@@ -39,8 +41,10 @@ function cmdInspect(sourceUri: string): void {
   const endpoint = resolveEndpoint(projectRootFromEnv());
   const db = openDb(endpoint.dbPath);
   const envelopeStore = new EnvelopeStore(db);
+  const rankingLog = new RankingLog(db);
   const envelopes = envelopeStore.getBySourceUri(sourceUri);
-  process.stdout.write(`${JSON.stringify(envelopes, null, 2)}\n`);
+  const rankingHistory = rankingLog.forSourceUri(sourceUri);
+  process.stdout.write(`${JSON.stringify({ envelopes, rankingHistory }, null, 2)}\n`);
 }
 
 function cmdLogTail(limit: number): void {

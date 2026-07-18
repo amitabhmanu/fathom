@@ -1,0 +1,11 @@
+{
+  "session_id": "test-session-0001",
+  "prompt_id": "550e8400-e29b-41d4-a716-446655440000",
+  "transcript_path": "C:\\Users\\Amitabh\\.claude\\projects\\fathom\\transcript.jsonl",
+  "cwd": "C:\\Users\\Amitabh\\projects\\fathom",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Glob",
+  "tool_input": { "pattern": "*.ts" },
+  "tool_output": "packages/fathomd/src/endpoint.ts\npackages/fathomd/src/server.ts"
+}

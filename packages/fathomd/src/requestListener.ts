@@ -5,10 +5,12 @@ import { handleHook } from "./routes/hook.js";
 import { handleGetContext, handlePutContext, handleDeleteContext } from "./routes/context.js";
 import type { RawEventLog } from "./store/rawEventLog.js";
 import type { EnvelopeStore } from "./store/envelopeStore.js";
+import type { RankingLog } from "./store/rankingLog.js";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
   envelopeStore: EnvelopeStore;
+  rankingLog: RankingLog;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -26,7 +28,11 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
       if (method === "POST" && segments[0] === "hook" && segments.length === 2) {
         const eventName = decodeURIComponent(segments[1]);
         const payload = await readJsonBody(req);
-        const result = handleHook(eventName, payload, { rawEventLog: deps.rawEventLog });
+        const result = handleHook(eventName, payload, {
+          rawEventLog: deps.rawEventLog,
+          envelopeStore: deps.envelopeStore,
+          rankingLog: deps.rankingLog
+        });
         sendJson(res, 200, result);
         return;
       }

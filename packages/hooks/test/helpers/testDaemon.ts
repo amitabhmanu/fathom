@@ -6,6 +6,7 @@ import {
   openDb,
   RawEventLog,
   EnvelopeStore,
+  RankingLog,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -16,6 +17,8 @@ export interface TestDaemon {
   endpoint: FathomEndpoint;
   handle: FathomServerHandle;
   rawEventLog: RawEventLog;
+  envelopeStore: EnvelopeStore;
+  rankingLog: RankingLog;
   cleanup(): Promise<void>;
 }
 
@@ -30,7 +33,8 @@ export async function startTestDaemon(): Promise<TestDaemon> {
   const db = openDb(endpoint.dbPath);
   const rawEventLog = new RawEventLog(db);
   const envelopeStore = new EnvelopeStore(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore });
+  const rankingLog = new RankingLog(db);
+  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog });
   const handle = await startServer(endpoint, listener);
 
   async function cleanup(): Promise<void> {
@@ -39,5 +43,5 @@ export async function startTestDaemon(): Promise<TestDaemon> {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 
-  return { endpoint, handle, rawEventLog, cleanup };
+  return { endpoint, handle, rawEventLog, envelopeStore, rankingLog, cleanup };
 }

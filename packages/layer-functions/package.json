@@ -1,18 +1,14 @@
 {
-  "name": "@fathom/fathomd",
+  "name": "@fathom/layer-functions",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "fathomd": "./dist/cli.js"
-  },
   "scripts": {
     "build": "tsc --build"
   },
   "dependencies": {
-    "@fathom/context-contract": "^0.1.0",
-    "@fathom/layer-functions": "^0.1.0"
+    "@fathom/context-contract": "^0.1.0"
   }
 }

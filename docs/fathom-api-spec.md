@@ -86,7 +86,7 @@ type FitResult =
 // Layer 1 — happy path
 function rank(input: {
   query: string;
-  candidates: { source_uri: string; content: string }[];
+  candidates: { source_uri: string; content: string; last_modified?: string }[];
 }): RankResult;
 
 type RankResult = {

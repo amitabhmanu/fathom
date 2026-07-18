@@ -1,0 +1,99 @@
+[
+  {
+    "query": "resolveEndpoint pipe name",
+    "candidates": [
+      { "source_uri": "a.ts", "content": "export function resolveEndpoint(root) { return pipeName; }" },
+      { "source_uri": "b.ts", "content": "unrelated database migration script for legacy accounts" },
+      { "source_uri": "c.ts", "content": "css styling rules for buttons and form inputs" }
+    ],
+    "expected_top": "a.ts"
+  },
+  {
+    "query": "parse envelope schema",
+    "candidates": [
+      { "source_uri": "envelope.ts", "content": "export function parseEnvelope(input) { return EnvelopeSchema.safeParse(input); }" },
+      { "source_uri": "server.ts", "content": "http server request listener routing dispatch" }
+    ],
+    "expected_top": "envelope.ts"
+  },
+  {
+    "query": "raw event log append",
+    "candidates": [
+      { "source_uri": "rawEventLog.ts", "content": "class RawEventLog { append(eventName, payload) { insert into raw_events } }" },
+      { "source_uri": "styles.css", "content": "css grid layout rules for the dashboard page" }
+    ],
+    "expected_top": "rawEventLog.ts"
+  },
+  {
+    "query": "named pipe transport",
+    "candidates": [
+      { "source_uri": "server.ts", "content": "binds to the Windows named pipe first, falls back to TCP transport" },
+      { "source_uri": "migrate.ts", "content": "database migration script adding a new column to the users table" }
+    ],
+    "expected_top": "server.ts"
+  },
+  {
+    "query": "sqlite database migrations",
+    "candidates": [
+      { "source_uri": "db.ts", "content": "CREATE TABLE IF NOT EXISTS raw_events with sqlite database migrations" },
+      { "source_uri": "requestListener.ts", "content": "http request listener routing and dispatch to route handlers" }
+    ],
+    "expected_top": "db.ts"
+  },
+  {
+    "query": "cosine similarity embedding",
+    "candidates": [
+      { "source_uri": "embedding.ts", "content": "function cosineSimilarity(a, b) computes dot product over vector norms for embedding" },
+      { "source_uri": "keyword.ts", "content": "keyword token frequency scoring for exact term matches" }
+    ],
+    "expected_top": "embedding.ts"
+  },
+  {
+    "query": "stopwords tokenize query",
+    "candidates": [
+      { "source_uri": "queryRewriter.ts", "content": "STOPWORDS set contains a an of to and, used to tokenize the rewritten query" },
+      { "source_uri": "reranker.ts", "content": "reranker breaks ties by recency, most recently modified wins" }
+    ],
+    "expected_top": "queryRewriter.ts"
+  },
+  {
+    "query": "hook shim stdin json",
+    "candidates": [
+      { "source_uri": "stdin.ts", "content": "readStdinJson reads process.stdin data and end events, parses json" },
+      { "source_uri": "mcpServer.ts", "content": "mcp server tool registration and mcp explicit action tools" }
+    ],
+    "expected_top": "stdin.ts"
+  },
+  {
+    "query": "credential grant access policy",
+    "candidates": [
+      { "source_uri": "access.md", "content": "OAuth or service-account provisioning just-in-time credential grant, policy layer" },
+      { "source_uri": "hybrid.ts", "content": "hybrid retriever combines keyword and embedding scores with a tunable weight" }
+    ],
+    "expected_top": "access.md"
+  },
+  {
+    "query": "discard record reconciliation",
+    "candidates": [
+      { "source_uri": "reconcile.ts", "content": "discard_record reason timestamp, reconcile candidates against the source of truth registry" },
+      { "source_uri": "rawEventLog.ts", "content": "sqlite raw event log append and tail queries" }
+    ],
+    "expected_top": "reconcile.ts"
+  },
+  {
+    "query": "daemon health check spawn",
+    "candidates": [
+      { "source_uri": "client.ts", "content": "ensureDaemonRunning checks health, spawns the daemon detached if unreachable" },
+      { "source_uri": "envelope.ts", "content": "context envelope schema fields origin_layer provenance confidence" }
+    ],
+    "expected_top": "client.ts"
+  },
+  {
+    "query": "gate enforcement cascade layers",
+    "candidates": [
+      { "source_uri": "architecture.md", "content": "gate enforcement engine cascades from the entry layer down to layer 1" },
+      { "source_uri": "reranker.ts", "content": "sorts scored candidates primarily by score, then recency" }
+    ],
+    "expected_top": "architecture.md"
+  }
+]

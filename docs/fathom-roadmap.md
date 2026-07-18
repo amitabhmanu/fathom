@@ -40,7 +40,13 @@ Each phase lists: goal, deliverables, exit criteria, dependencies. A phase is "d
 
 **Exit criteria:**
 - Every `Read`/`Grep`/`Glob` result in a session produces a stored envelope with populated `ranking_metadata`.
-- A relevance regression test set (hand-built queries with known-correct top result) passes above an agreed threshold.
+- A relevance regression test set (hand-built queries with known-correct top result) passes above an agreed threshold — implemented as a top-1 pass rate ≥ 0.8 over 12 hand-built cases (`packages/layer-functions/test/fixtures/relevance-regression-set.json`).
+
+**Implementation notes (concrete interpretations decided during Phase 1):**
+- `rank()`'s relevance cutoff is `0.08`, calibrated against the naive n-gram embedding retriever's noise floor (two unrelated passages still share some character trigrams, so the cutoff must clear that floor or nothing ever gets filtered).
+- The hybrid retriever weights keyword matching over the naive embedding fallback (0.75/0.25), so an exact identifier/term hit is not overridden by embedding noise — this matters more for code search than loose semantic similarity.
+- `PostToolUse`→`rank()` glue (tool-name-specific candidate extraction from `tool_input`/`tool_output`) lives in `packages/fathomd/src/routes/postToolUseRanking.ts`, not in `@fathom/layer-functions`, to keep the layer functions agent-agnostic per the sidecar rationale in fathom-architecture.md. `Read` treats the whole file as one candidate; `Grep`/`Glob` split output into one candidate per line.
+- The ranking log (`packages/fathomd/src/store/rankingLog.ts`) records only cutoff-surviving results, not the full scored-and-dropped set — `rank()`'s API returns only survivors, so logging anything more would require extending its contract, which Phase 1 didn't need.
 
 **Dependencies:** Phase 0.
 

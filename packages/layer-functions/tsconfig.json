@@ -6,7 +6,6 @@
   },
   "include": ["src"],
   "references": [
-    { "path": "../context-contract" },
-    { "path": "../layer-functions" }
+    { "path": "../context-contract" }
   ]
 }

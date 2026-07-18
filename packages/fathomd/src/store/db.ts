@@ -22,7 +22,14 @@ const MIGRATIONS = [
      supersedes TEXT,
      created_at TEXT NOT NULL
    )`,
-  `CREATE INDEX IF NOT EXISTS idx_envelopes_source_uri ON envelopes(source_uri)`
+  `CREATE INDEX IF NOT EXISTS idx_envelopes_source_uri ON envelopes(source_uri)`,
+  `CREATE TABLE IF NOT EXISTS ranking_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     query TEXT NOT NULL,
+     cutoff_applied REAL NOT NULL,
+     results_json TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   )`
 ];
 
 export function openDb(dbPath: string): DatabaseSyncType {
