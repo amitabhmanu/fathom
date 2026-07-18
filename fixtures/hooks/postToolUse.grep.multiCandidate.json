@@ -7,5 +7,10 @@
   "hook_event_name": "PostToolUse",
   "tool_name": "Grep",
   "tool_input": { "pattern": "resolveEndpoint" },
-  "tool_output": "packages/fathomd/src/endpoint.ts:12:export function resolveEndpoint(root) {\npackages/fathomd/src/server.ts:5:import http from \"node:http\";"
+  "tool_response": {
+    "mode": "content",
+    "numFiles": 2,
+    "filenames": [],
+    "content": "packages/fathomd/src/endpoint.ts:12:export function resolveEndpoint(root) {\npackages/fathomd/src/server.ts:5:import http from \"node:http\";"
+  }
 }

@@ -45,16 +45,16 @@ function isRecordPayload(payload: unknown): payload is Record<string, unknown> {
 interface PostToolUsePayloadShape {
   tool_name?: unknown;
   tool_input?: unknown;
-  tool_output?: unknown;
+  tool_response?: unknown;
 }
 
 function handlePostToolUse(payload: PostToolUsePayloadShape, deps: HookRouteDeps): HookResponse {
-  const { tool_name: toolName, tool_input: toolInput, tool_output: toolOutput } = payload;
+  const { tool_name: toolName, tool_input: toolInput, tool_response: toolResponse } = payload;
   const toolInputRecord = (toolInput ?? {}) as Record<string, unknown>;
 
   // Phase 1: layer-1 ranking for Read/Grep/Glob.
-  if (isRankableToolUse(toolName) && typeof toolOutput === "string") {
-    const { query, candidates } = extractRankInput(toolName, toolInputRecord, toolOutput);
+  if (isRankableToolUse(toolName)) {
+    const { query, candidates } = extractRankInput(toolName, toolInputRecord, toolResponse);
     if (candidates.length > 0) {
       const { ranked, cutoff_applied: cutoffApplied } = rank({ query, candidates });
       for (const envelope of ranked) {
@@ -72,17 +72,20 @@ function handlePostToolUse(payload: PostToolUsePayloadShape, deps: HookRouteDeps
     }
   }
 
-  // Phase 2: layer-2 fit for any tool's oversized output, not just the rankable set.
-  if (typeof toolName === "string" && typeof toolOutput === "string") {
-    const { fitResult, sourceUri } = applyFitToToolOutput(toolName, toolInputRecord, toolOutput);
-    if (fitResult.kind === "summarize") {
-      // Store the original content under its own key so the summary's retrieval_hook has
-      // something real to resolve back to (see docs/fathom-context-contract.md's
-      // "compression is a one-way door without this" invariant).
-      deps.envelopeStore.put(makeRawSourceEnvelope(toolOutput, sourceUri));
-      deps.envelopeStore.put(fitResult.envelope);
+  // Phase 2: layer-2 fit for any tool whose tool_response has real, extractable content.
+  if (typeof toolName === "string") {
+    const application = applyFitToToolOutput(toolName, toolInputRecord, toolResponse);
+    if (application) {
+      const { fitResult, sourceUri, content } = application;
+      if (fitResult.kind === "summarize") {
+        // Store the original content under its own key so the summary's retrieval_hook has
+        // something real to resolve back to (see docs/fathom-context-contract.md's
+        // "compression is a one-way door without this" invariant).
+        deps.envelopeStore.put(makeRawSourceEnvelope(content, sourceUri));
+        deps.envelopeStore.put(fitResult.envelope);
+      }
+      return buildPostToolUseFitResponse(fitResult);
     }
-    return buildPostToolUseFitResponse(fitResult);
   }
 
   return {};

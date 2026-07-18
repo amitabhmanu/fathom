@@ -7,5 +7,9 @@
   "hook_event_name": "PostToolUse",
   "tool_name": "Glob",
   "tool_input": { "pattern": "*.ts" },
-  "tool_output": "packages/fathomd/src/endpoint.ts\npackages/fathomd/src/server.ts"
+  "tool_response": {
+    "filenames": ["packages/fathomd/src/endpoint.ts", "packages/fathomd/src/server.ts"],
+    "numFiles": 2,
+    "truncated": false
+  }
 }

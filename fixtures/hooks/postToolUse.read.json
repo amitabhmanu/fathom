@@ -7,5 +7,11 @@
   "hook_event_name": "PostToolUse",
   "tool_name": "Read",
   "tool_input": { "file_path": "docs/fathom-roadmap.md" },
-  "tool_output": "# Fathom build roadmap\n\nSequencing principle: build bottom-up through the layer stack."
+  "tool_response": {
+    "type": "text",
+    "file": {
+      "filePath": "docs/fathom-roadmap.md",
+      "content": "# Fathom build roadmap\n\nSequencing principle: build bottom-up through the layer stack."
+    }
+  }
 }

@@ -157,14 +157,17 @@ describe("PostToolUse layer-1 ranking (Phase 1 exit criteria)", () => {
 describe("PostToolUse layer-2 fit (Phase 2 exit criteria)", () => {
   it("compresses oversized output via updatedToolOutput and keeps a hash-verified retrieval_hook back to the original", async () => {
     server = await startTestServer();
-    const fixture = loadFixture("postToolUse.largeRead.json") as { tool_output: string };
-    const originalHash = createHash("sha256").update(fixture.tool_output).digest("hex");
+    const fixture = loadFixture("postToolUse.largeRead.json") as {
+      tool_response: { file: { content: string } };
+    };
+    const originalContent = fixture.tool_response.file.content;
+    const originalHash = createHash("sha256").update(originalContent).digest("hex");
 
     const res = await server.request("POST", "/hook/PostToolUse", fixture);
     expect(res.status).toBe(200);
     const body = res.body as { hookSpecificOutput?: { updatedToolOutput?: string } };
     expect(body.hookSpecificOutput?.updatedToolOutput).toBeTruthy();
-    expect(body.hookSpecificOutput!.updatedToolOutput!.length).toBeLessThan(fixture.tool_output.length / 2);
+    expect(body.hookSpecificOutput!.updatedToolOutput!.length).toBeLessThan(originalContent.length / 2);
 
     const docRes = await server.request(
       "GET",

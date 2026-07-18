@@ -7,5 +7,10 @@
   "hook_event_name": "PostToolUse",
   "tool_name": "Edit",
   "tool_input": { "file_path": "docs/foo.md", "old_string": "a", "new_string": "b" },
-  "tool_output": "The file docs/foo.md has been updated."
+  "tool_response": {
+    "filePath": "docs/foo.md",
+    "oldString": "a",
+    "newString": "b",
+    "originalFile": "a"
+  }
 }
