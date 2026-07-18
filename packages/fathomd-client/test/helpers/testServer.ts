@@ -14,6 +14,8 @@ import {
   RecurrenceStore,
   DriftStore,
   ElicitedQuestionIndex,
+  RegistryPromotionStore,
+  ThresholdStore,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -42,6 +44,8 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
   const recurrenceStore = new RecurrenceStore(db);
   const driftStore = new DriftStore(db);
   const elicitedQuestionIndex = new ElicitedQuestionIndex(db);
+  const registryPromotionStore = new RegistryPromotionStore(db);
+  const thresholdStore = new ThresholdStore(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -52,7 +56,9 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
     accessGrantStore,
     recurrenceStore,
     driftStore,
-    elicitedQuestionIndex
+    elicitedQuestionIndex,
+    registryPromotionStore,
+    thresholdStore
   });
   const handle = await startServer(endpoint, listener);
 

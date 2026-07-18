@@ -38,4 +38,8 @@ export class AccessStatusStore {
   clear(sourceUri: string): void {
     this.db.prepare("DELETE FROM access_status WHERE source_uri = ?").run(sourceUri);
   }
+
+  listAll(): AccessStatusRow[] {
+    return this.db.prepare("SELECT * FROM access_status ORDER BY created_at DESC").all() as unknown as AccessStatusRow[];
+  }
 }

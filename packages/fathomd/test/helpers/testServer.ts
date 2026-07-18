@@ -14,6 +14,8 @@ import { AccessGrantStore } from "../../src/store/accessGrantStore.js";
 import { RecurrenceStore } from "../../src/store/recurrenceStore.js";
 import { DriftStore } from "../../src/store/driftStore.js";
 import { ElicitedQuestionIndex } from "../../src/store/elicitedQuestionIndex.js";
+import { RegistryPromotionStore } from "../../src/store/registryPromotionStore.js";
+import { ThresholdStore } from "../../src/store/thresholdStore.js";
 import { createRequestListener } from "../../src/requestListener.js";
 import { startServer, type FathomServerHandle } from "../../src/server.js";
 
@@ -30,6 +32,8 @@ export interface TestServer {
   recurrenceStore: RecurrenceStore;
   driftStore: DriftStore;
   elicitedQuestionIndex: ElicitedQuestionIndex;
+  registryPromotionStore: RegistryPromotionStore;
+  thresholdStore: ThresholdStore;
   request(method: string, urlPath: string, body?: unknown): Promise<{ status: number; body: unknown }>;
   cleanup(): Promise<void>;
 }
@@ -48,6 +52,8 @@ export async function startTestServer(): Promise<TestServer> {
   const recurrenceStore = new RecurrenceStore(db);
   const driftStore = new DriftStore(db);
   const elicitedQuestionIndex = new ElicitedQuestionIndex(db);
+  const registryPromotionStore = new RegistryPromotionStore(db);
+  const thresholdStore = new ThresholdStore(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -58,7 +64,9 @@ export async function startTestServer(): Promise<TestServer> {
     accessGrantStore,
     recurrenceStore,
     driftStore,
-    elicitedQuestionIndex
+    elicitedQuestionIndex,
+    registryPromotionStore,
+    thresholdStore
   });
   const handle = await startServer(endpoint, listener);
 
@@ -102,6 +110,8 @@ export async function startTestServer(): Promise<TestServer> {
     recurrenceStore,
     driftStore,
     elicitedQuestionIndex,
+    registryPromotionStore,
+    thresholdStore,
     request,
     cleanup
   };

@@ -2,7 +2,11 @@ import { z } from "zod";
 
 export const RegistryRuleSchema = z.object({
   uri_prefix: z.string(),
-  priority: z.number()
+  priority: z.number(),
+  /** Phase 6 addition (additive, optional): distinguishes a rule fathomd added itself
+   *  after observing recurring reconciliation wins from one a human hand-edited. */
+  auto_promoted: z.boolean().optional(),
+  promoted_at: z.string().optional()
 });
 
 export const RegistryEntrySchema = z.object({

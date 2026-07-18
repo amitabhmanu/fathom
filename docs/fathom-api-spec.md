@@ -124,7 +124,10 @@ type DriftSignalType =
   | "policy-changed" | "fact-changed" | "task-evolved";
 type ReEntryLayer = "1" | "2" | "3" | "3f" | "4" | "5" | "6";
 
-function routeDrift(signal: { type: DriftSignalType; confidence: number }): {
+function routeDrift(
+  signal: { type: DriftSignalType; confidence: number },
+  thresholdOverrides?: Partial<Record<ReEntryLayer, number>>   // Phase 6 addition — see tuning below
+): {
   triggered: boolean;
   re_entry_layer: ReEntryLayer;
   cascade: ReEntryLayer[];        // entry layer down through 1, per the nesting rule
@@ -133,6 +136,18 @@ function routeDrift(signal: { type: DriftSignalType; confidence: number }): {
 ```
 
 The daemon-side cascade runner (`runCascadeFrom()` in `packages/fathomd/src/routes/driftCascade.ts`, not itself a layer-functions export) executes the `cascade` array: layers 2 and 1 get real autonomous reprocessing (`fit()`/`rank()` on freshly-fetched content); layers 3/3f/4/5/6 are surfaced to the model rather than auto-executed, since they inherently need a credential grant, human input, or a real discovery/reconciliation decision a background handler can't supply on its own.
+
+### Threshold tuning (Phase 6 addition)
+
+`routeDrift()`'s per-layer confidence thresholds no longer have to be the router's hardcoded defaults. `adjustThreshold()` (`packages/layer-functions/src/tuning.ts`) nudges a layer's threshold up (false positive) or down (false negative), clamped to a safe per-layer bounds table that never lets one layer's threshold drift into another layer's usual range:
+
+```ts
+type TuningOutcome = "false-positive" | "false-negative";
+function adjustThreshold(currentThreshold: number, layer: ReEntryLayer, outcome: TuningOutcome): number;
+function boundsFor(layer: ReEntryLayer): { min: number; max: number };
+```
+
+`fathomd`'s `ThresholdStore` (`packages/fathomd/src/store/thresholdStore.ts`) persists the result per layer and feeds it back into every `routeDrift()` call site in `routes/hook.ts` as `thresholdOverrides`, so a tuning adjustment survives a daemon restart and applies uniformly across all four drift detectors (`FileChanged`, `ConfigChange`, `PostToolUseFailure`, `UserPromptSubmit`).
 
 ---
 
@@ -161,6 +176,10 @@ DELETE /context/{envelope_id}                        // hard delete, audit-logge
 // finding and acting on it), per fathom-architecture.md's FileChanged/ConfigChange rows.
 
 // Registry (Phase 3 — hand-maintained config initially, per roadmap)
+// Phase 6 adds two optional fields to each rule (auto_promoted?: boolean, promoted_at?:
+// string) written only by POST /reconcile's promotion path, never by a hand-edit through
+// this PUT endpoint — the audit trail distinguishing an automatic promotion from a manual
+// registry change is "does this rule have those fields," not a separate log.
 GET  /registry/{data_type} → RegistryEntry (404 if none configured)
 PUT  /registry/{data_type}  body: RegistryEntry → { ok: boolean; reason?: string }
 // GET /catalog was speculative and never built: Phase 4's discover() takes a CatalogEntry[]
@@ -182,8 +201,36 @@ POST /gap/report body: { description, task_context, checklist_ref? } → { quest
 POST /elicit      body: { question, human_answer? } →
   { ok: true; content: string; provenance: "human-confirmed" | "inferred"; source_uri: string } | { ok: false; reason: string }
 
+// Reconciliation + registry auto-promotion (Phase 6)
+// The first real trigger point for reconcile() — Phase 3 only ever called it directly in
+// tests. Every non-tiebreak win counts toward that source's reconciliation win streak
+// (RegistryPromotionStore); once a source recurs past the threshold (3), it's promoted
+// permanently into .fathom/registry.json with auto_promoted: true and promoted_at set —
+// distinguishing an automatic promotion from a hand-edited registry rule, which has neither
+// field. Idempotent: a source already promoted doesn't get a duplicate rule on further wins.
+POST /reconcile body: { data_type: string; candidates: { source_uri: string; content: string; last_modified?: string }[] } →
+  { chosen_source_uri: string; confidence: number; requires_human_tiebreak: boolean; promoted: boolean }
+
+// Session reporting (Phase 6)
+// Aggregates the feedback-store data every prior phase has been logging (ranking,
+// compaction, drift, access denials, gaps, registry promotions) into one snapshot, for
+// human review. Not scoped to actual session boundaries — no session-id concept is
+// persisted anywhere in this system — this is a recent-activity window (last 1000 events
+// per store), the same shape whether queried mid-session or after the daemon's been running
+// for a while.
+GET /report/session → SessionReport   // see packages/fathomd/src/routes/sessionReport.ts
+
+// Threshold tuning (Phase 6)
+// Closes the loop on a routeDrift() decision: was it a false positive (raise the layer's
+// threshold) or a false negative (lower it)? Persisted via ThresholdStore, applied on every
+// subsequent routeDrift() call for that layer via its thresholdOverrides parameter.
+POST /drift/outcome body: { layer: ReEntryLayer; outcome: "false-positive" | "false-negative" } →
+  { layer: ReEntryLayer; previous_threshold: number; new_threshold: number }
+
 GET /health → { ok: boolean; version: string }
 ```
+
+`fathomd report` (CLI) prints the same `SessionReport` JSON as `GET /report/session`, for local inspection without a running HTTP client.
 
 Each `/hook/{event_name}` handler internally dispatches to the layer-function cascade above based on the event mapping in [fathom-architecture.md](fathom-architecture.md)'s hook table, then formats the result back into that specific hook's expected output shape (`permissionDecision` for `PreToolUse`, `updatedToolOutput` for `PostToolUse`, etc.) — the hook-shape translation lives entirely in the `/hook/{event_name}` layer so the layer functions above stay hook-agnostic.
 

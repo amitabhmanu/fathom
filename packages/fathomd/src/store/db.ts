@@ -68,6 +68,23 @@ const MIGRATIONS = [
      source_uri TEXT NOT NULL,
      content TEXT NOT NULL,
      updated_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS reconciliation_wins (
+     data_type TEXT NOT NULL,
+     source_uri TEXT NOT NULL,
+     win_count INTEGER NOT NULL,
+     PRIMARY KEY (data_type, source_uri)
+   )`,
+  `CREATE TABLE IF NOT EXISTS registry_promotions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     data_type TEXT NOT NULL,
+     source_uri TEXT NOT NULL,
+     promoted_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS layer_thresholds (
+     layer TEXT PRIMARY KEY,
+     threshold REAL NOT NULL,
+     updated_at TEXT NOT NULL
    )`
 ];
 

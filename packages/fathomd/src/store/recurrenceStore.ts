@@ -26,4 +26,12 @@ export class RecurrenceStore {
   isDocumentationPriority(topic: string): boolean {
     return this.count(topic) >= DOCUMENTATION_PRIORITY_THRESHOLD;
   }
+
+  /** Every topic that has crossed the documentation-priority threshold, for session reporting. */
+  documentationPriorityTopics(): string[] {
+    const rows = this.db
+      .prepare("SELECT topic FROM gap_events GROUP BY topic HAVING COUNT(*) >= ?")
+      .all(DOCUMENTATION_PRIORITY_THRESHOLD) as unknown as { topic: string }[];
+    return rows.map((r) => r.topic);
+  }
 }

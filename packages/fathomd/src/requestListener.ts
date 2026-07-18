@@ -7,6 +7,9 @@ import { handleGetRegistryEntry, handlePutRegistryEntry } from "./routes/registr
 import { handleCheckAccessGrant, handleApproveAccessGrant } from "./routes/accessGrant.js";
 import { handleReportGap } from "./routes/gap.js";
 import { handleElicit } from "./routes/elicitRoute.js";
+import { handleReconcile } from "./routes/reconcileRoute.js";
+import { buildSessionReport } from "./routes/sessionReport.js";
+import { handleDriftOutcome } from "./routes/driftOutcome.js";
 import type { RawEventLog } from "./store/rawEventLog.js";
 import type { EnvelopeStore } from "./store/envelopeStore.js";
 import type { RankingLog } from "./store/rankingLog.js";
@@ -17,6 +20,9 @@ import type { AccessGrantStore } from "./store/accessGrantStore.js";
 import type { RecurrenceStore } from "./store/recurrenceStore.js";
 import type { DriftStore } from "./store/driftStore.js";
 import type { ElicitedQuestionIndex } from "./store/elicitedQuestionIndex.js";
+import type { RegistryPromotionStore } from "./store/registryPromotionStore.js";
+import type { ThresholdStore } from "./store/thresholdStore.js";
+import type { ReEntryLayer, TuningOutcome } from "@fathom/layer-functions";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
@@ -29,6 +35,8 @@ export interface RequestListenerDeps {
   recurrenceStore: RecurrenceStore;
   driftStore: DriftStore;
   elicitedQuestionIndex: ElicitedQuestionIndex;
+  registryPromotionStore: RegistryPromotionStore;
+  thresholdStore: ThresholdStore;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -52,7 +60,8 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
           rankingLog: deps.rankingLog,
           compactionLog: deps.compactionLog,
           accessStatusStore: deps.accessStatusStore,
-          driftStore: deps.driftStore
+          driftStore: deps.driftStore,
+          thresholdStore: deps.thresholdStore
         });
         sendJson(res, 200, result);
         return;
@@ -152,6 +161,50 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
           }
         );
         sendJson(res, result.ok ? 200 : 422, result);
+        return;
+      }
+
+      if (method === "POST" && segments.length === 1 && segments[0] === "reconcile") {
+        const body = (await readJsonBody(req)) as {
+          data_type?: string;
+          candidates?: { source_uri: string; content: string; last_modified?: string }[];
+        };
+        const result = handleReconcile(
+          { data_type: body.data_type ?? "", candidates: body.candidates ?? [] },
+          {
+            envelopeStore: deps.envelopeStore,
+            registryStore: deps.registryStore,
+            registryPromotionStore: deps.registryPromotionStore
+          }
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (method === "GET" && segments.length === 2 && segments[0] === "report" && segments[1] === "session") {
+        const report = buildSessionReport({
+          rankingLog: deps.rankingLog,
+          compactionLog: deps.compactionLog,
+          driftStore: deps.driftStore,
+          accessStatusStore: deps.accessStatusStore,
+          recurrenceStore: deps.recurrenceStore,
+          registryPromotionStore: deps.registryPromotionStore
+        });
+        sendJson(res, 200, report);
+        return;
+      }
+
+      if (method === "POST" && segments.length === 2 && segments[0] === "drift" && segments[1] === "outcome") {
+        const body = (await readJsonBody(req)) as { layer?: ReEntryLayer; outcome?: TuningOutcome };
+        if (!body.layer || !body.outcome) {
+          sendJson(res, 400, { error: "layer and outcome are required" });
+          return;
+        }
+        const result = handleDriftOutcome(
+          { layer: body.layer, outcome: body.outcome },
+          { thresholdStore: deps.thresholdStore }
+        );
+        sendJson(res, 200, result);
         return;
       }
 

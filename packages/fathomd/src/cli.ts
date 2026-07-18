@@ -11,7 +11,10 @@ import { AccessGrantStore } from "./store/accessGrantStore.js";
 import { RecurrenceStore } from "./store/recurrenceStore.js";
 import { DriftStore } from "./store/driftStore.js";
 import { ElicitedQuestionIndex } from "./store/elicitedQuestionIndex.js";
+import { RegistryPromotionStore } from "./store/registryPromotionStore.js";
+import { ThresholdStore } from "./store/thresholdStore.js";
 import { createRequestListener } from "./requestListener.js";
+import { buildSessionReport } from "./routes/sessionReport.js";
 import { startServer } from "./server.js";
 
 function projectRootFromEnv(): string {
@@ -32,6 +35,8 @@ async function cmdStart(): Promise<void> {
   const recurrenceStore = new RecurrenceStore(db);
   const driftStore = new DriftStore(db);
   const elicitedQuestionIndex = new ElicitedQuestionIndex(db);
+  const registryPromotionStore = new RegistryPromotionStore(db);
+  const thresholdStore = new ThresholdStore(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -42,7 +47,9 @@ async function cmdStart(): Promise<void> {
     accessGrantStore,
     recurrenceStore,
     driftStore,
-    elicitedQuestionIndex
+    elicitedQuestionIndex,
+    registryPromotionStore,
+    thresholdStore
   });
   const handle = await startServer(endpoint, listener);
   process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);
@@ -83,6 +90,21 @@ function cmdLogTail(limit: number): void {
   }
 }
 
+function cmdReport(): void {
+  const projectRoot = projectRootFromEnv();
+  const endpoint = resolveEndpoint(projectRoot);
+  const db = openDb(endpoint.dbPath);
+  const report = buildSessionReport({
+    rankingLog: new RankingLog(db),
+    compactionLog: new CompactionLog(db),
+    driftStore: new DriftStore(db),
+    accessStatusStore: new AccessStatusStore(db),
+    recurrenceStore: new RecurrenceStore(db),
+    registryPromotionStore: new RegistryPromotionStore(db)
+  });
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+}
+
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
   switch (command) {
@@ -103,8 +125,11 @@ async function main(): Promise<void> {
         throw new Error("usage: fathomd log tail [limit]");
       }
       break;
+    case "report":
+      cmdReport();
+      break;
     default:
-      process.stderr.write("usage: fathomd start|stop|inspect <source_uri>|log tail [limit]\n");
+      process.stderr.write("usage: fathomd start|stop|inspect <source_uri>|log tail [limit]|report\n");
       process.exitCode = 1;
   }
 }

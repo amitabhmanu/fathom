@@ -52,15 +52,23 @@ const LAYER_CONFIDENCE_THRESHOLDS: Record<ReEntryLayer, number> = {
   "6": 0.9
 };
 
+export function defaultThresholdFor(layer: ReEntryLayer): number {
+  return LAYER_CONFIDENCE_THRESHOLDS[layer];
+}
+
 /**
  * The layer router: classifies a drift signal's re-entry layer and decides, given the
  * signal's confidence, whether it actually clears that layer's bar to act on. Rule-based
  * and deterministic — a lookup table, not a classifier model, per the roadmap's "start
  * rule-based first" guidance.
+ *
+ * `thresholdOverrides` (Phase 6): lets a caller supply a tuned threshold per layer instead
+ * of the hardcoded default — see tuning.ts's adjustThreshold(). Falls back to the default
+ * for any layer not present in the override map.
  */
-export function routeDrift(signal: DriftSignal): RouteDriftResult {
+export function routeDrift(signal: DriftSignal, thresholdOverrides?: Partial<Record<ReEntryLayer, number>>): RouteDriftResult {
   const reEntryLayer = RE_ENTRY_MAP[signal.type];
-  const threshold = LAYER_CONFIDENCE_THRESHOLDS[reEntryLayer];
+  const threshold = thresholdOverrides?.[reEntryLayer] ?? LAYER_CONFIDENCE_THRESHOLDS[reEntryLayer];
   const triggered = signal.confidence >= threshold;
   const startIndex = CASCADE_ORDER.indexOf(reEntryLayer);
   const cascade = triggered ? CASCADE_ORDER.slice(startIndex) : [];

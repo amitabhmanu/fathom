@@ -7,6 +7,7 @@ import type { RankingLog } from "../store/rankingLog.js";
 import type { CompactionLog } from "../store/compactionLog.js";
 import type { AccessStatusStore, AccessStatusKind } from "../store/accessStatusStore.js";
 import type { DriftStore } from "../store/driftStore.js";
+import type { ThresholdStore } from "../store/thresholdStore.js";
 import { isRankableToolUse, extractRankInput } from "./postToolUseRanking.js";
 import { applyFitToToolOutput, buildPostToolUseFitResponse, makeRawSourceEnvelope } from "./postToolUseFit.js";
 import { deriveToolSourceUri } from "./toolSourceUri.js";
@@ -19,6 +20,7 @@ export interface HookRouteDeps {
   compactionLog: CompactionLog;
   accessStatusStore: AccessStatusStore;
   driftStore: DriftStore;
+  thresholdStore: ThresholdStore;
 }
 
 export type HookResponse =
@@ -221,7 +223,7 @@ function handlePostToolUseFailure(payload: Record<string, unknown>, deps: HookRo
   const sourceUri = deriveToolSourceUri(toolName, (toolInput ?? {}) as Record<string, unknown>);
 
   if (classification === "not-found") {
-    const routed = routeDrift({ type: "source-moved", confidence: 0.8 });
+    const routed = routeDrift({ type: "source-moved", confidence: 0.8 }, deps.thresholdStore.overridesSnapshot());
     if (!routed.triggered) {
       return {};
     }
@@ -305,9 +307,10 @@ function handleFileChanged(payload: Record<string, unknown>, deps: HookRouteDeps
     (e) => e.source_uri !== filePath && e.content_hash === freshHash
   );
 
+  const overrides = deps.thresholdStore.overridesSnapshot();
   const routed = duplicateElsewhere
-    ? routeDrift({ type: "competing-source-appeared", confidence: 0.85 })
-    : routeDrift({ type: "content-edited", confidence: 0.9 });
+    ? routeDrift({ type: "competing-source-appeared", confidence: 0.85 }, overrides)
+    : routeDrift({ type: "content-edited", confidence: 0.9 }, overrides);
 
   if (routed.triggered) {
     deps.driftStore.record(filePath, duplicateElsewhere ? "competing-source-appeared" : "content-edited", routed.re_entry_layer, routed.cascade);
@@ -325,7 +328,7 @@ function handleFileChanged(payload: Record<string, unknown>, deps: HookRouteDeps
  * layer-3 re-check it's actually for.
  */
 function handleConfigChange(deps: HookRouteDeps): HookResponse {
-  const routed = routeDrift({ type: "policy-changed", confidence: 0.9 });
+  const routed = routeDrift({ type: "policy-changed", confidence: 0.9 }, deps.thresholdStore.overridesSnapshot());
   if (routed.triggered) {
     deps.driftStore.record("*", "policy-changed", routed.re_entry_layer, routed.cascade);
   }
@@ -361,7 +364,10 @@ function handleUserPromptSubmit(payload: Record<string, unknown>, deps: HookRout
     return {};
   }
 
-  const routed = routeDrift({ type: "query-intent-shifted", confidence: 1 - overlapRatio });
+  const routed = routeDrift(
+    { type: "query-intent-shifted", confidence: 1 - overlapRatio },
+    deps.thresholdStore.overridesSnapshot()
+  );
   if (!routed.triggered) {
     return {};
   }
