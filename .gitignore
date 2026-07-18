@@ -1,0 +1,6 @@
+node_modules/
+**/dist/
+.fathom/state/
+*.log
+.fathom/*.db
+.fathom/*.db-*
