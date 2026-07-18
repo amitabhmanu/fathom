@@ -114,6 +114,26 @@ scope → elicit → discover → reconcile → access → fit → rank
 
 Entering at layer N means calling that layer's function and then every function to its right, in order, before the result is usable.
 
+### Layer router (Phase 5 addition)
+
+Not one of the original seven cascade functions — `routeDrift()` is the "layer router" component from the layers doc's drift section, added when Phase 5 actually built drift detection. Deliberately rule-based (a lookup table, not a classifier model), per the layers doc's own "start rule-based first" guidance:
+
+```ts
+type DriftSignalType =
+  | "content-edited" | "query-intent-shifted" | "source-moved" | "competing-source-appeared"
+  | "policy-changed" | "fact-changed" | "task-evolved";
+type ReEntryLayer = "1" | "2" | "3" | "3f" | "4" | "5" | "6";
+
+function routeDrift(signal: { type: DriftSignalType; confidence: number }): {
+  triggered: boolean;
+  re_entry_layer: ReEntryLayer;
+  cascade: ReEntryLayer[];        // entry layer down through 1, per the nesting rule
+  threshold_applied: number;      // per-layer confidence bar; layer 1's is lowest, layer 6's highest
+};
+```
+
+The daemon-side cascade runner (`runCascadeFrom()` in `packages/fathomd/src/routes/driftCascade.ts`, not itself a layer-functions export) executes the `cascade` array: layers 2 and 1 get real autonomous reprocessing (`fit()`/`rank()` on freshly-fetched content); layers 3/3f/4/5/6 are surfaced to the model rather than auto-executed, since they inherently need a credential grant, human input, or a real discovery/reconciliation decision a background handler can't supply on its own.
+
 ---
 
 ## `fathomd` local daemon API
@@ -131,8 +151,14 @@ GET /context/{source_uri} → Envelope | Envelope[]   // may be multiple if frag
 PUT /context                                         // write/supersede an envelope
 DELETE /context/{envelope_id}                        // hard delete, audit-logged, not used by normal gate flow
 
-// Drift
-POST /drift/check { source_uri | envelope_id } → { drift: boolean; re_entry_layer?: Layer; signal: string }
+// Drift (Phase 5)
+// The originally-sketched model-initiated POST /drift/check was never built — Phase 5's
+// detectors are all event-driven (FileChanged, ConfigChange, PostToolUseFailure,
+// UserPromptSubmit, /elicit), not a poll-style endpoint a caller queries on demand.
+// fathom_check_freshness (below) would be the natural caller for something like this if a
+// later phase builds it. Drift events themselves aren't exposed over HTTP at all — they're
+// resolved internally between hop 1 (a detector recording one) and hop 2 (PreToolUse
+// finding and acting on it), per fathom-architecture.md's FileChanged/ConfigChange rows.
 
 // Registry (Phase 3 — hand-maintained config initially, per roadmap)
 GET  /registry/{data_type} → RegistryEntry (404 if none configured)

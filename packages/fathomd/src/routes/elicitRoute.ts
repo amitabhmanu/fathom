@@ -1,8 +1,12 @@
-import { elicit } from "@fathom/layer-functions";
+import { elicit, routeDrift } from "@fathom/layer-functions";
 import type { EnvelopeStore } from "../store/envelopeStore.js";
+import type { ElicitedQuestionIndex } from "../store/elicitedQuestionIndex.js";
+import type { DriftStore } from "../store/driftStore.js";
 
 export interface ElicitRouteDeps {
   envelopeStore: EnvelopeStore;
+  elicitedQuestionIndex: ElicitedQuestionIndex;
+  driftStore: DriftStore;
 }
 
 export interface ElicitRouteInput {
@@ -20,6 +24,10 @@ export type ElicitRouteResult =
  * (obtained through a normal conversation turn) — see elicit()'s own doc comment. Writes
  * the resulting envelope back to the store so it's retrievable in a later session,
  * converting this layer-5 event into something durable for future askers.
+ *
+ * Phase 5 addition: if the same question was answered before with *different* content,
+ * that's "the real-world fact itself changed" drift (layer 5 re-entry, the old artifact is
+ * void) — recorded so a later PreToolUse/UserPromptSubmit can surface it.
  */
 export function handleElicit(input: ElicitRouteInput, deps: ElicitRouteDeps): ElicitRouteResult {
   // An empty/whitespace-only answer means "no answer yet," not a literal empty fact — the
@@ -36,7 +44,17 @@ export function handleElicit(input: ElicitRouteInput, deps: ElicitRouteDeps): El
     return { ok: false, reason: result.reason };
   }
 
+  const priorAnswer = deps.elicitedQuestionIndex.get(input.question);
+  if (priorAnswer && priorAnswer.content !== result.content) {
+    const routed = routeDrift({ type: "fact-changed", confidence: 0.85 });
+    if (routed.triggered) {
+      deps.driftStore.record(priorAnswer.source_uri, "fact-changed", routed.re_entry_layer, routed.cascade);
+    }
+  }
+
   deps.envelopeStore.put(result.envelope);
+  deps.elicitedQuestionIndex.set(input.question, result.envelope.source_uri, result.content);
+
   const provenance = result.kind === "human-answer" ? "human-confirmed" : "inferred";
   return { ok: true, content: result.content, provenance, source_uri: result.envelope.source_uri };
 }

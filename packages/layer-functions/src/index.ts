@@ -17,3 +17,4 @@ export * from "./registry/registryConfig.schema.js";
 export * from "./scope.js";
 export * from "./elicit.js";
 export * from "./discover.js";
+export * from "./router.js";

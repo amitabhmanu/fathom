@@ -53,6 +53,21 @@ const MIGRATIONS = [
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      topic TEXT NOT NULL,
      created_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS drift_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     source_uri TEXT NOT NULL,
+     signal_type TEXT NOT NULL,
+     re_entry_layer TEXT NOT NULL,
+     cascade_json TEXT NOT NULL,
+     resolved INTEGER NOT NULL,
+     created_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS elicited_questions (
+     question_hash TEXT PRIMARY KEY,
+     source_uri TEXT NOT NULL,
+     content TEXT NOT NULL,
+     updated_at TEXT NOT NULL
    )`
 ];
 

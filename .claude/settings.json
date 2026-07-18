@@ -66,6 +66,21 @@
           { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/permissionDenied.js"] }
         ]
       }
+    ],
+    "FileChanged": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/fileChanged.js"] }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/configChange.js"] }
+        ]
+      }
     ]
   }
 }

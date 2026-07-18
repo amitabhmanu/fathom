@@ -9,6 +9,8 @@ import { AccessStatusStore } from "./store/accessStatusStore.js";
 import { RegistryStore } from "./store/registryStore.js";
 import { AccessGrantStore } from "./store/accessGrantStore.js";
 import { RecurrenceStore } from "./store/recurrenceStore.js";
+import { DriftStore } from "./store/driftStore.js";
+import { ElicitedQuestionIndex } from "./store/elicitedQuestionIndex.js";
 import { createRequestListener } from "./requestListener.js";
 import { startServer } from "./server.js";
 
@@ -28,6 +30,8 @@ async function cmdStart(): Promise<void> {
   const registryStore = new RegistryStore(projectRoot);
   const accessGrantStore = new AccessGrantStore(db);
   const recurrenceStore = new RecurrenceStore(db);
+  const driftStore = new DriftStore(db);
+  const elicitedQuestionIndex = new ElicitedQuestionIndex(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -36,7 +40,9 @@ async function cmdStart(): Promise<void> {
     accessStatusStore,
     registryStore,
     accessGrantStore,
-    recurrenceStore
+    recurrenceStore,
+    driftStore,
+    elicitedQuestionIndex
   });
   const handle = await startServer(endpoint, listener);
   process.stdout.write(`fathomd listening on ${handle.transport} ${handle.address} (pid ${process.pid})\n`);

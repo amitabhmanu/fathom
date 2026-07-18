@@ -261,7 +261,7 @@ describe("Layer 3 gating: PreToolUse / PostToolUseFailure / PermissionDenied (Ph
     expect(status?.status).toBe("credentials");
   });
 
-  it("PostToolUseFailure defers 404/not-found errors to Phase 4 — no tagging, no decision", async () => {
+  it("PostToolUseFailure does not tag 404/not-found as layer-3 inaccessible (that's a layer-4 relocation signal, handled in Phase 5)", async () => {
     server = await startTestServer();
     const res = await server.request(
       "POST",
@@ -269,7 +269,8 @@ describe("Layer 3 gating: PreToolUse / PostToolUseFailure / PermissionDenied (Ph
       loadFixture("postToolUseFailure.notFound.json")
     );
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({});
+    // Phase 5 completes this deferral: see "PostToolUseFailure routes not-found as
+    // source-moved drift (Phase 5)" below for the actual behavior.
     expect(server.accessStatusStore.get("system://moved-doc.md")).toBeNull();
   });
 

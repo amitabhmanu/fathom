@@ -12,6 +12,8 @@ import {
   RegistryStore,
   AccessGrantStore,
   RecurrenceStore,
+  DriftStore,
+  ElicitedQuestionIndex,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -25,6 +27,7 @@ export interface RunningTestDaemon {
   registryStore: RegistryStore;
   accessGrantStore: AccessGrantStore;
   recurrenceStore: RecurrenceStore;
+  driftStore: DriftStore;
   cleanup(): Promise<void>;
 }
 
@@ -41,6 +44,8 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
   const registryStore = new RegistryStore(projectRoot);
   const accessGrantStore = new AccessGrantStore(db);
   const recurrenceStore = new RecurrenceStore(db);
+  const driftStore = new DriftStore(db);
+  const elicitedQuestionIndex = new ElicitedQuestionIndex(db);
   const listener = createRequestListener({
     rawEventLog,
     envelopeStore,
@@ -49,7 +54,9 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
     accessStatusStore,
     registryStore,
     accessGrantStore,
-    recurrenceStore
+    recurrenceStore,
+    driftStore,
+    elicitedQuestionIndex
   });
   const handle = await startServer(endpoint, listener);
 
@@ -59,5 +66,5 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 
-  return { endpoint, handle, envelopeStore, registryStore, accessGrantStore, recurrenceStore, cleanup };
+  return { endpoint, handle, envelopeStore, registryStore, accessGrantStore, recurrenceStore, driftStore, cleanup };
 }

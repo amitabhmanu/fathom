@@ -15,6 +15,8 @@ import type { AccessStatusStore } from "./store/accessStatusStore.js";
 import type { RegistryStore } from "./store/registryStore.js";
 import type { AccessGrantStore } from "./store/accessGrantStore.js";
 import type { RecurrenceStore } from "./store/recurrenceStore.js";
+import type { DriftStore } from "./store/driftStore.js";
+import type { ElicitedQuestionIndex } from "./store/elicitedQuestionIndex.js";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
@@ -25,6 +27,8 @@ export interface RequestListenerDeps {
   registryStore: RegistryStore;
   accessGrantStore: AccessGrantStore;
   recurrenceStore: RecurrenceStore;
+  driftStore: DriftStore;
+  elicitedQuestionIndex: ElicitedQuestionIndex;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -47,7 +51,8 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
           envelopeStore: deps.envelopeStore,
           rankingLog: deps.rankingLog,
           compactionLog: deps.compactionLog,
-          accessStatusStore: deps.accessStatusStore
+          accessStatusStore: deps.accessStatusStore,
+          driftStore: deps.driftStore
         });
         sendJson(res, 200, result);
         return;
@@ -140,7 +145,11 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
         const body = (await readJsonBody(req)) as { question?: string; human_answer?: string };
         const result = handleElicit(
           { question: body.question ?? "", human_answer: body.human_answer },
-          { envelopeStore: deps.envelopeStore }
+          {
+            envelopeStore: deps.envelopeStore,
+            elicitedQuestionIndex: deps.elicitedQuestionIndex,
+            driftStore: deps.driftStore
+          }
         );
         sendJson(res, result.ok ? 200 : 422, result);
         return;
