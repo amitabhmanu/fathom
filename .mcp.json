@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "fathom": {
+      "command": "node",
+      "args": ["${CLAUDE_PROJECT_DIR:-.}/packages/fathom-mcp/dist/main.js"],
+      "env": {
+        "FATHOM_PROJECT_ROOT": "${CLAUDE_PROJECT_DIR:-.}"
+      }
+    }
+  }
+}
