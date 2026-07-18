@@ -74,6 +74,7 @@ type AccessResult =
 // Layer 2 — doesn't fit the window
 function fit(input: {
   content: string;
+  source_uri: string;              // added during Phase 2: needed to build a correct envelope/retrieval_hook
   budget_tokens: number;
   existing_hierarchy?: RetrievalHook[];
 }): FitResult;

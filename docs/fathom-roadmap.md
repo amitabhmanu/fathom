@@ -66,6 +66,14 @@ Each phase lists: goal, deliverables, exit criteria, dependencies. A phase is "d
 - A deliberately oversized fixture (e.g. a large multi-file read) produces a compressed envelope whose `retrieval_hook` successfully resolves back to full content on demand.
 - `PostCompact` log shows Fathom's summary was used at least once in a real oversized session, not just in fixture tests.
 
+**Implementation notes (concrete interpretations decided during Phase 2):**
+- `fit()`'s per-tool-result budget defaults to 500 tokens (`packages/fathomd/src/routes/postToolUseFit.ts`); the delegate threshold is 8x budget (4000 tokens), both deliberately small so fixtures can exercise all three paths without needing enormous test content.
+- Hierarchical summary tiers (doc/section/chunk) are stored under synthetic source_uris (`{source}#summary`, `{source}#summary-section-N`, `{source}#summary-chunk-N-M`), distinct from the original content's own source_uri — this is what lets the original raw content stay independently retrievable (and hash-verifiable) at its real key while the summary lives alongside it, not on top of it.
+- `fit()`'s public contract (per fathom-api-spec.md) returns only the doc tier; section/chunk tiers are built and unit-tested (`hierarchical.test.ts`) but not yet persisted by fathomd — full "drill in on demand" wiring is deferred to whichever later phase actually needs it, rather than built speculatively now.
+- `existing_hierarchy` is accepted per the API spec but unused in Phase 2 — reusing a previously-computed hierarchy would require `fit()` to fetch stored envelope content, which pure layer functions deliberately don't do (storage access is fathomd's job).
+- Layer-2 fit() applies to *any* tool's `PostToolUse` output (not just the Read/Grep/Glob set ranking uses), since oversized-content handling isn't tool-specific the way ranking's candidate extraction is.
+- The `PostCompact` "log shows Fathom's summary was used" exit criterion is implemented via a small `CompactionLog` table bridging `PreCompact` (records which envelope_ids it surfaced) and `PostCompact` (reads that back and logs it) — necessary because `PostCompact`'s real hook input doesn't itself reference what `PreCompact` did.
+
 **Dependencies:** Phase 1 (compression needs ranked candidates to decide what's load-bearing).
 
 ---

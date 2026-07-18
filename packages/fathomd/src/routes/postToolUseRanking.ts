@@ -1,4 +1,5 @@
 import type { RankCandidate } from "@fathom/layer-functions";
+import { deriveToolSourceUri } from "./toolSourceUri.js";
 
 const RANKABLE_TOOLS = new Set(["Read", "Grep", "Glob"]);
 
@@ -16,16 +17,6 @@ function extractQuery(toolName: string, toolInput: Record<string, unknown>): str
     return typeof toolInput.file_path === "string" ? toolInput.file_path : "";
   }
   return typeof toolInput.pattern === "string" ? toolInput.pattern : "";
-}
-
-function extractSourceUriPrefix(toolName: string, toolInput: Record<string, unknown>): string {
-  if (toolName === "Read" && typeof toolInput.file_path === "string") {
-    return toolInput.file_path;
-  }
-  if (typeof toolInput.pattern === "string") {
-    return `${toolName.toLowerCase()}:${toolInput.pattern}`;
-  }
-  return `${toolName.toLowerCase()}:unknown`;
 }
 
 /**
@@ -63,7 +54,7 @@ export function extractRankInput(
   toolOutput: string
 ): ExtractedRankInput {
   const query = extractQuery(toolName, toolInput);
-  const fallbackPrefix = extractSourceUriPrefix(toolName, toolInput);
+  const fallbackPrefix = deriveToolSourceUri(toolName, toolInput);
 
   if (toolName === "Read") {
     return { query, candidates: [{ source_uri: fallbackPrefix, content: toolOutput }] };

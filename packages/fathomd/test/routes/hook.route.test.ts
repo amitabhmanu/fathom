@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { startTestServer, type TestServer } from "../helpers/testServer.js";
@@ -150,5 +151,96 @@ describe("PostToolUse layer-1 ranking (Phase 1 exit criteria)", () => {
     const history = server.rankingLog.forSourceUri("packages/fathomd/src/endpoint.ts:12");
     expect(history.length).toBe(1);
     expect(history[0].query).toBe("resolveEndpoint");
+  });
+});
+
+describe("PostToolUse layer-2 fit (Phase 2 exit criteria)", () => {
+  it("compresses oversized output via updatedToolOutput and keeps a hash-verified retrieval_hook back to the original", async () => {
+    server = await startTestServer();
+    const fixture = loadFixture("postToolUse.largeRead.json") as { tool_output: string };
+    const originalHash = createHash("sha256").update(fixture.tool_output).digest("hex");
+
+    const res = await server.request("POST", "/hook/PostToolUse", fixture);
+    expect(res.status).toBe(200);
+    const body = res.body as { hookSpecificOutput?: { updatedToolOutput?: string } };
+    expect(body.hookSpecificOutput?.updatedToolOutput).toBeTruthy();
+    expect(body.hookSpecificOutput!.updatedToolOutput!.length).toBeLessThan(fixture.tool_output.length / 2);
+
+    const docRes = await server.request(
+      "GET",
+      `/context/${encodeURIComponent("docs/large-file.md#summary")}`
+    );
+    expect(docRes.status).toBe(200);
+    const docEnvelope = docRes.body as {
+      retrieval_hook?: { full_source_uri: string; resolution: string };
+      content: string;
+    };
+    expect(docEnvelope.retrieval_hook?.resolution).toBe("doc");
+    expect(docEnvelope.retrieval_hook?.full_source_uri).toBe("docs/large-file.md");
+    expect(docEnvelope.content).toBe(body.hookSpecificOutput!.updatedToolOutput);
+
+    // Resolve retrieval_hook.full_source_uri back to the original, and verify by hash —
+    // ranking (Phase 1) may have also stored an envelope at this same source_uri, so this
+    // normalizes to an array and finds the layer-2 raw copy rather than assuming one entry.
+    const rawRes = await server.request(
+      "GET",
+      `/context/${encodeURIComponent(docEnvelope.retrieval_hook!.full_source_uri)}`
+    );
+    expect(rawRes.status).toBe(200);
+    const rawEnvelopes = (Array.isArray(rawRes.body) ? rawRes.body : [rawRes.body]) as {
+      origin_layer: string;
+      content_hash?: string;
+    }[];
+    const rawLayer2Envelope = rawEnvelopes.find((e) => e.origin_layer === "2");
+    expect(rawLayer2Envelope).toBeTruthy();
+    expect(rawLayer2Envelope!.content_hash).toBe(originalHash);
+  });
+
+  it("passes small output through unchanged (no hookSpecificOutput)", async () => {
+    server = await startTestServer();
+    const fixture = loadFixture("postToolUse.read.json");
+    const res = await server.request("POST", "/hook/PostToolUse", fixture);
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("hookSpecificOutput");
+  });
+});
+
+describe("PreCompact / PostCompact (Phase 2 exit criteria)", () => {
+  it("PreCompact surfaces a stored summary via additionalContext, never a block decision", async () => {
+    server = await startTestServer();
+    await server.request("POST", "/hook/PostToolUse", loadFixture("postToolUse.largeRead.json"));
+
+    const res = await server.request("POST", "/hook/PreCompact", loadFixture("preCompact.manual.json"));
+    expect(res.status).toBe(200);
+    const body = res.body as { decision?: string; hookSpecificOutput?: { additionalContext?: string } };
+    expect(body.decision).toBeUndefined();
+    expect(body.hookSpecificOutput?.additionalContext).toBeTruthy();
+    expect(body.hookSpecificOutput!.additionalContext).toContain("docs/large-file.md");
+  });
+
+  it("PreCompact returns the Phase-0 no-op when no layer-2 summaries are stored yet", async () => {
+    server = await startTestServer();
+    const res = await server.request("POST", "/hook/PreCompact", loadFixture("preCompact.auto.json"));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({});
+  });
+
+  it("PostCompact logs a reference to the same envelope_id PreCompact substituted", async () => {
+    server = await startTestServer();
+    await server.request("POST", "/hook/PostToolUse", loadFixture("postToolUse.largeRead.json"));
+
+    const docRes = await server.request(
+      "GET",
+      `/context/${encodeURIComponent("docs/large-file.md#summary")}`
+    );
+    const docEnvelopeId = (docRes.body as { envelope_id: string }).envelope_id;
+
+    await server.request("POST", "/hook/PreCompact", loadFixture("preCompact.manual.json"));
+    await server.request("POST", "/hook/PostCompact", loadFixture("postCompact.basic.json"));
+
+    const history = server.compactionLog.tail(10);
+    const postEntry = history.find((row) => row.phase === "post");
+    expect(postEntry).toBeTruthy();
+    expect(JSON.parse(postEntry!.envelope_ids_json)).toContain(docEnvelopeId);
   });
 });

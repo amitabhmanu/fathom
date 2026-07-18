@@ -29,6 +29,12 @@ const MIGRATIONS = [
      cutoff_applied REAL NOT NULL,
      results_json TEXT NOT NULL,
      created_at TEXT NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS compaction_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     phase TEXT NOT NULL,
+     envelope_ids_json TEXT NOT NULL,
+     created_at TEXT NOT NULL
    )`
 ];
 

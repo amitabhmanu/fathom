@@ -1,0 +1,7 @@
+{
+  "session_id": "test-session-0001",
+  "cwd": "C:\\Users\\Amitabh\\projects\\fathom",
+  "permission_mode": "default",
+  "hook_event_name": "PreCompact",
+  "trigger": "auto"
+}

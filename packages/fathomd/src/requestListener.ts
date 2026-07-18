@@ -6,11 +6,13 @@ import { handleGetContext, handlePutContext, handleDeleteContext } from "./route
 import type { RawEventLog } from "./store/rawEventLog.js";
 import type { EnvelopeStore } from "./store/envelopeStore.js";
 import type { RankingLog } from "./store/rankingLog.js";
+import type { CompactionLog } from "./store/compactionLog.js";
 
 export interface RequestListenerDeps {
   rawEventLog: RawEventLog;
   envelopeStore: EnvelopeStore;
   rankingLog: RankingLog;
+  compactionLog: CompactionLog;
 }
 
 export function createRequestListener(deps: RequestListenerDeps): RequestListener {
@@ -31,7 +33,8 @@ export function createRequestListener(deps: RequestListenerDeps): RequestListene
         const result = handleHook(eventName, payload, {
           rawEventLog: deps.rawEventLog,
           envelopeStore: deps.envelopeStore,
-          rankingLog: deps.rankingLog
+          rankingLog: deps.rankingLog,
+          compactionLog: deps.compactionLog
         });
         sendJson(res, 200, result);
         return;

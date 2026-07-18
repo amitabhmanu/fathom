@@ -36,6 +36,20 @@
           { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/stop.js"] }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/preCompact.js"] }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/packages/hooks/dist/postCompact.js"] }
+        ]
+      }
     ]
   }
 }

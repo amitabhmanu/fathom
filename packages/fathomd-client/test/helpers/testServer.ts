@@ -7,6 +7,7 @@ import {
   RawEventLog,
   EnvelopeStore,
   RankingLog,
+  CompactionLog,
   createRequestListener,
   startServer,
   type FathomEndpoint,
@@ -28,7 +29,8 @@ export async function startRunningTestDaemon(): Promise<RunningTestDaemon> {
   const rawEventLog = new RawEventLog(db);
   const envelopeStore = new EnvelopeStore(db);
   const rankingLog = new RankingLog(db);
-  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog });
+  const compactionLog = new CompactionLog(db);
+  const listener = createRequestListener({ rawEventLog, envelopeStore, rankingLog, compactionLog });
   const handle = await startServer(endpoint, listener);
 
   async function cleanup(): Promise<void> {

@@ -52,4 +52,14 @@ export class EnvelopeStore {
     const result = this.db.prepare("DELETE FROM envelopes WHERE envelope_id = ?").run(envelopeId);
     return Number(result.changes) > 0;
   }
+
+  /**
+   * Every stored envelope. Used by PreCompact to find layer-2 doc-tier summaries in scope
+   * for the session — a full-table scan is fine at this scale (single local project store);
+   * revisit with dedicated indexed columns if it ever isn't.
+   */
+  listAll(): Envelope[] {
+    const rows = this.db.prepare("SELECT envelope_json FROM envelopes").all() as { envelope_json: string }[];
+    return rows.map((r) => JSON.parse(r.envelope_json) as Envelope);
+  }
 }
